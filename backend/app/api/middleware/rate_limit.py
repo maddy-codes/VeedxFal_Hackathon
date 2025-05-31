@@ -99,7 +99,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Remaining"] = str(remaining)
             response.headers["X-RateLimit-Reset"] = str(int(time.time()) + 60)
         except Exception as e:
-            logger.warning(f"Failed to add rate limit headers: {e}")
+            logger.debug(f"Failed to add rate limit headers: {e}")
         
         return response
     
@@ -118,10 +118,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             
             # Test connection
             await self.redis_client.ping()
-            logger.info("Redis connection established for rate limiting")
+            logger.debug("Redis connection established for rate limiting")
             
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            logger.warning(f"Redis unavailable for rate limiting: {e}")
             self.redis_client = None
     
     async def _check_rate_limit(self, request: Request, client_id: str) -> bool:
@@ -164,7 +164,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return current_requests < requests_limit
             
         except Exception as e:
-            logger.error(f"Rate limit check failed: {e}")
+            logger.debug(f"Rate limit check failed: {e}")
             return True  # Allow if check fails
     
     async def _get_remaining_requests(self, request: Request, client_id: str) -> int:
@@ -186,7 +186,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             current_requests = await self.redis_client.zcount(key, window_start, now)
             return max(0, requests_limit - current_requests)
         except Exception as e:
-            logger.error(f"Failed to get remaining requests: {e}")
+            logger.debug(f"Failed to get remaining requests: {e}")
             return requests_limit
     
     def _get_rate_config(self, path: str) -> Dict[str, int]:

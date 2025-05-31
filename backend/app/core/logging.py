@@ -16,9 +16,9 @@ from app.core.config import settings
 def setup_logging() -> None:
     """Setup structured logging configuration."""
     
-    # Configure structlog
-    structlog.configure(
-        processors=[
+    # Configure structlog with minimal processors for development
+    if settings.is_production:
+        processors = [
             structlog.stdlib.filter_by_level,
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
@@ -27,8 +27,20 @@ def setup_logging() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer() if settings.is_production else structlog.dev.ConsoleRenderer(),
-        ],
+            structlog.processors.JSONRenderer(),
+        ]
+    else:
+        # Minimal processors for development to avoid Rich recursion issues
+        processors = [
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_log_level,
+            structlog.processors.TimeStamper(fmt="%H:%M:%S"),
+            structlog.processors.format_exc_info,
+            structlog.dev.ConsoleRenderer(colors=False, exception_formatter=structlog.dev.plain_traceback),
+        ]
+    
+    structlog.configure(
+        processors=processors,
         context_class=dict,
         logger_factory=LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -60,27 +72,42 @@ def setup_logging() -> None:
         "loggers": {
             "": {
                 "handlers": ["console"],
-                "level": settings.LOG_LEVEL,
+                "level": "WARNING" if not settings.is_production else settings.LOG_LEVEL,
                 "propagate": True,
             },
             "uvicorn": {
                 "handlers": ["console"],
-                "level": "INFO",
+                "level": "WARNING",
                 "propagate": False,
             },
             "uvicorn.access": {
                 "handlers": ["console"],
-                "level": "INFO",
+                "level": "ERROR",  # Disable access logs in development
+                "propagate": False,
+            },
+            "uvicorn.error": {
+                "handlers": ["console"],
+                "level": "WARNING",
                 "propagate": False,
             },
             "sqlalchemy.engine": {
                 "handlers": ["console"],
-                "level": "WARNING",
+                "level": "ERROR",  # Only show SQL errors
+                "propagate": False,
+            },
+            "sqlalchemy.pool": {
+                "handlers": ["console"],
+                "level": "ERROR",
                 "propagate": False,
             },
             "httpx": {
                 "handlers": ["console"],
-                "level": "WARNING",
+                "level": "ERROR",
+                "propagate": False,
+            },
+            "app": {
+                "handlers": ["console"],
+                "level": "WARNING" if not settings.is_production else "INFO",
                 "propagate": False,
             },
         },

@@ -10,7 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.logging import log_security_event
-from app.core.security_simple import get_security_manager
+from app.core.security import get_security_manager
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = {
         "/",
         "/health",
+        "/api/v1/health/supabase",
         "/docs",
         "/redoc",
         "/openapi.json",
         "/api/v1/auth/login",
+        "/api/v1/auth/signup",
         "/api/v1/auth/refresh",
     }
     
@@ -83,8 +85,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.user_id = user["id"]
             request.state.token = token
             
-            # Log successful authentication
-            logger.debug(f"User {user['id']} authenticated for {request.url.path}")
+            # Only log authentication for sensitive endpoints
+            if request.url.path.startswith("/api/v1/auth/") or request.url.path.startswith("/api/v1/sync/"):
+                logger.info(f"User {user['id']} authenticated for {request.url.path}")
             
         except HTTPException:
             raise

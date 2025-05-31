@@ -15,6 +15,8 @@ from app.models.auth import (
     LoginResponse,
     RefreshTokenResponse,
     ShopifyConnectRequest,
+    SignupRequest,
+    SignupResponse,
     Store,
     User,
 )
@@ -101,6 +103,105 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication service error"
+        )
+
+
+@router.post(
+    "/signup",
+    response_model=SignupResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid signup data or user already exists"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+    summary="User signup",
+    description="Register a new user account",
+)
+async def signup(
+    request: Request,
+    signup_data: SignupRequest,
+    security_manager=Depends(get_security_manager_dep),
+):
+    """Register a new user account."""
+    
+    try:
+        # Get client information for logging
+        client_ip = request.headers.get("X-Forwarded-For", request.client.host)
+        user_agent = request.headers.get("User-Agent", "unknown")
+        
+        # Prepare user metadata
+        user_metadata = {
+            "name": signup_data.name,
+            "signup_ip": client_ip,
+            "signup_user_agent": user_agent,
+        }
+        
+        # Sign up with Supabase
+        signup_result = await security_manager.sign_up_user(
+            signup_data.email,
+            signup_data.password,
+            user_metadata
+        )
+        
+        if not signup_result:
+            log_security_event(
+                "signup_failed",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                email=signup_data.email,
+                reason="signup_service_error"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User registration failed. Email may already be in use."
+            )
+        
+        # Create user object
+        user = User(
+            id=signup_result["id"],
+            email=signup_result["email"],
+            user_metadata=signup_result.get("user_metadata"),
+        )
+        
+        # Log successful signup
+        log_security_event(
+            "signup_success",
+            user_id=user.id,
+            ip_address=client_ip,
+            user_agent=user_agent,
+            email=user.email
+        )
+        
+        log_business_event(
+            "user_signup",
+            user_id=user.id,
+            email=user.email,
+            name=signup_data.name
+        )
+        
+        # Determine response based on email confirmation status
+        if signup_result["email_confirmed"]:
+            return SignupResponse(
+                access_token=signup_result["access_token"],
+                token_type="bearer",
+                expires_in=3600,
+                user=user,
+                email_confirmed=True,
+                message="Account created successfully. You are now logged in."
+            )
+        else:
+            return SignupResponse(
+                user=user,
+                email_confirmed=False,
+                message="Account created successfully. Please check your email to confirm your account before logging in."
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Signup error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration service error"
         )
 
 
@@ -253,7 +354,6 @@ async def get_current_user_info(request: Request):
 )
 async def get_current_store(
     request: Request,
-    db_manager=Depends(get_db_manager_dep),
 ):
     """Get current user's store information."""
     
@@ -266,30 +366,31 @@ async def get_current_store(
         
         user_id = request.state.user_id
         
-        # Get user's store
-        query = """
-        SELECT id, shop_domain, shop_name, is_active, shop_config, created_at, updated_at
-        FROM stores 
-        WHERE (shop_config->>'user_id')::text = :user_id 
-        AND is_active = true
-        """
+        # Use Supabase client instead of direct database connection
+        from app.core.database import get_supabase_client
+        supabase_client = get_supabase_client()
         
-        result = await db_manager.fetch_one(query, {"user_id": user_id})
+        # Query user's store using Supabase client
+        result = supabase_client.table('stores').select(
+            'id, shop_domain, shop_name, is_active, shop_config, created_at, updated_at'
+        ).eq('shop_config->>user_id', user_id).eq('is_active', True).execute()
         
-        if not result:
+        if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="No active store found for user"
             )
         
+        store_data = result.data[0]
+        
         return Store(
-            id=result["id"],
-            shop_domain=result["shop_domain"],
-            shop_name=result["shop_name"],
-            is_active=result["is_active"],
-            shop_config=result["shop_config"],
-            created_at=result["created_at"],
-            updated_at=result["updated_at"],
+            id=store_data["id"],
+            shop_domain=store_data["shop_domain"],
+            shop_name=store_data["shop_name"],
+            is_active=store_data["is_active"],
+            shop_config=store_data["shop_config"],
+            created_at=store_data["created_at"],
+            updated_at=store_data["updated_at"],
         )
         
     except HTTPException:
@@ -316,7 +417,6 @@ async def get_current_store(
 async def connect_shopify_store(
     request: Request,
     connect_data: ShopifyConnectRequest,
-    db_manager=Depends(get_db_manager_dep),
 ):
     """Connect Shopify store via OAuth."""
     
@@ -343,42 +443,49 @@ async def connect_shopify_store(
             "connected_at": datetime.utcnow().isoformat(),
         }
         
-        # Insert or update store
-        query = """
-        INSERT INTO stores (shop_domain, shop_name, access_token, shop_config, is_active)
-        VALUES (:shop_domain, :shop_name, :access_token, :shop_config, true)
-        ON CONFLICT (shop_domain) 
-        DO UPDATE SET 
-            access_token = EXCLUDED.access_token,
-            shop_config = EXCLUDED.shop_config,
-            updated_at = NOW(),
-            is_active = true
-        RETURNING id, shop_domain, shop_name, is_active, shop_config, created_at, updated_at
-        """
+        # Use Supabase client instead of direct database connection
+        from app.core.database import get_supabase_client
+        supabase_client = get_supabase_client()
         
-        result = await db_manager.fetch_one(query, {
+        # Insert or update store using Supabase client
+        store_data = {
             "shop_domain": connect_data.shop_domain,
             "shop_name": connect_data.shop_domain.split(".")[0].title(),
             "access_token": "placeholder_token",  # Would be real token from OAuth
             "shop_config": shop_config,
-        })
+            "is_active": True
+        }
+        
+        # Try to upsert the store
+        result = supabase_client.table('stores').upsert(
+            store_data,
+            on_conflict='shop_domain'
+        ).execute()
+        
+        if not result.data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create store"
+            )
+        
+        store_result = result.data[0]
         
         # Log store connection
         log_business_event(
             "shopify_store_connected",
             user_id=user_id,
-            shop_id=result["id"],
+            shop_id=store_result["id"],
             shop_domain=connect_data.shop_domain
         )
         
         return Store(
-            id=result["id"],
-            shop_domain=result["shop_domain"],
-            shop_name=result["shop_name"],
-            is_active=result["is_active"],
-            shop_config=result["shop_config"],
-            created_at=result["created_at"],
-            updated_at=result["updated_at"],
+            id=store_result["id"],
+            shop_domain=store_result["shop_domain"],
+            shop_name=store_result["shop_name"],
+            is_active=store_result["is_active"],
+            shop_config=store_result["shop_config"],
+            created_at=store_result["created_at"],
+            updated_at=store_result["updated_at"],
         )
         
     except HTTPException:

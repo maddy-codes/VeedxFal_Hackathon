@@ -14,6 +14,23 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=8, description="User password")
 
 
+class SignupRequest(BaseModel):
+    """User signup request model."""
+    name: str = Field(..., min_length=2, description="User full name")
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., min_length=8, description="User password")
+
+
+class SignupResponse(BaseModel):
+    """User signup response model."""
+    access_token: Optional[str] = Field(default=None, description="JWT access token (if email confirmed)")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: Optional[int] = Field(default=None, description="Token expiration time in seconds")
+    user: "User" = Field(..., description="User information")
+    email_confirmed: bool = Field(..., description="Whether email is confirmed")
+    message: str = Field(..., description="Signup status message")
+
+
 class LoginResponse(BaseModel):
     """User login response model."""
     access_token: str = Field(..., description="JWT access token")
@@ -76,3 +93,4 @@ class ErrorResponse(BaseModel):
 
 # Update forward references
 LoginResponse.model_rebuild()
+SignupResponse.model_rebuild()

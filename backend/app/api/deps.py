@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, Request, status
 
 from app.core.database import get_database, get_db_manager
-from app.core.security_simple import get_permission_checker, get_security_manager
+from app.core.security import get_permission_checker, get_security_manager
 from app.models.auth import User
 
 
@@ -54,24 +54,23 @@ async def get_optional_current_user(request: Request) -> Optional[User]:
 
 async def get_user_store_id(
     user_id: str = Depends(get_current_user_id),
-    db_manager=Depends(get_db_manager)
 ) -> int:
     """Get the store ID for the current user."""
-    query = """
-    SELECT id FROM stores 
-    WHERE (shop_config->>'user_id')::text = :user_id 
-    AND is_active = true
-    """
+    from app.core.database import get_supabase_client
     
-    result = await db_manager.fetch_one(query, {"user_id": user_id})
+    supabase_client = get_supabase_client()
     
-    if not result:
+    result = supabase_client.table('stores').select('id').eq(
+        'shop_config->>user_id', user_id
+    ).eq('is_active', True).execute()
+    
+    if not result.data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No active store found for user"
         )
     
-    return result["id"]
+    return result.data[0]["id"]
 
 
 async def verify_store_access(

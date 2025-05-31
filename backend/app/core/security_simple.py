@@ -85,6 +85,21 @@ class SecurityManager:
             }
         return None
     
+    async def sign_up_user(self, email: str, password: str, user_metadata: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        """Mock user signup for demo purposes."""
+        # For demo purposes, accept any email/password combination
+        if email and password and len(password) >= 8:
+            user_id = f"user_{email.split('@')[0]}"
+            return {
+                "id": user_id,
+                "email": email,
+                "user_metadata": user_metadata or {},
+                "access_token": self.create_access_token({"sub": user_id, "email": email}),
+                "refresh_token": "mock_refresh_token",
+                "email_confirmed": True,  # For demo, assume email is always confirmed
+            }
+        return None
+    
     async def refresh_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
         """Mock token refresh."""
         if refresh_token:

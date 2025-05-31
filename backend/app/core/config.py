@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Environment Configuration
     ENVIRONMENT: str = Field(default="development", description="Environment name")
     DEBUG: bool = Field(default=False, description="Debug mode")
-    LOG_LEVEL: str = Field(default="INFO", description="Logging level")
+    LOG_LEVEL: str = Field(default="WARNING", description="Logging level")
     
     # Security
     SECRET_KEY: str = Field(..., description="Application secret key")
@@ -43,7 +43,8 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY: Optional[str] = Field(default=None, description="Azure OpenAI API key")
     AZURE_OPENAI_ENDPOINT: Optional[str] = Field(default=None, description="Azure OpenAI endpoint")
     ELEVENLABS_API_KEY: Optional[str] = Field(default=None, description="ElevenLabs API key")
-    VEED_API_KEY: Optional[str] = Field(default=None, description="VEED.io API key")
+    FAL_KEY: Optional[str] = Field(default=None, description="fal.ai API key for video generation")
+    # VEED_API_KEY: Optional[str] = Field(default=None, description="VEED.io API key - replaced by fal.ai")
     
     # Redis Configuration
     REDIS_URL: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")

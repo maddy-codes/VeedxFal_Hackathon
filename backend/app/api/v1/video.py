@@ -68,7 +68,7 @@ async def generate_video(
         # 1. Get business insights
         # 2. Generate script with Azure OpenAI
         # 3. Generate audio with ElevenLabs
-        # 4. Create video with VEED.io
+        # 4. Create video with fal.ai models
         
         # Log video generation request
         log_business_event(

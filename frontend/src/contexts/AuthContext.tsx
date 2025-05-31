@@ -93,9 +93,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const store = await apiClient.getCurrentStore();
         dispatch({ type: 'SET_STORE', payload: store });
-      } catch (storeError) {
+      } catch (storeError: any) {
         // User might not have a store yet, that's okay
-        console.log('No store found for user');
+        if (storeError?.response?.status !== 404) {
+          console.warn('Store retrieval error:', storeError?.message || 'Unknown error');
+        }
+        // 404 errors are expected when user doesn't have a store yet
       }
 
     } catch (error) {
@@ -121,9 +124,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const store = await apiClient.getCurrentStore();
         dispatch({ type: 'SET_STORE', payload: store });
-      } catch (storeError) {
+      } catch (storeError: any) {
         // User might not have a store yet
-        console.log('No store found for user');
+        if (storeError?.response?.status !== 404) {
+          console.warn('Store retrieval error:', storeError?.message || 'Unknown error');
+        }
+        // 404 errors are expected when user doesn't have a store yet
       }
 
     } catch (error) {

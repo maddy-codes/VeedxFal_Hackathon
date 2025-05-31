@@ -10,12 +10,31 @@ from databases import Database
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from supabase import create_client, Client
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# SQLAlchemy setup
+# Supabase client setup (lazy initialization)
+_supabase_client: Optional[Client] = None
+
+def get_supabase_client() -> Client:
+    """Get Supabase client with lazy initialization."""
+    global _supabase_client
+    if _supabase_client is None:
+        try:
+            _supabase_client = create_client(
+                settings.SUPABASE_URL,
+                settings.SUPABASE_SERVICE_ROLE_KEY
+            )
+            logger.info("Supabase client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Supabase client: {e}")
+            raise
+    return _supabase_client
+
+# SQLAlchemy setup (kept for compatibility)
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
@@ -29,7 +48,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 metadata = MetaData()
 
-# Async database connection
+# Async database connection (fallback for direct SQL queries)
 # SQLite doesn't support connection pooling parameters
 if settings.DATABASE_URL.startswith('sqlite'):
     database = Database(settings.DATABASE_URL)
@@ -138,19 +157,35 @@ async def get_db_manager() -> DatabaseManager:
 async def check_database_health() -> Dict[str, Any]:
     """Check database connection health."""
     try:
+        # Try direct database connection first
         result = await database.fetch_one("SELECT 1 as health_check")
         return {
             "status": "healthy",
             "connected": True,
+            "method": "direct_postgres",
             "result": dict(result) if result else None
         }
     except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        return {
-            "status": "unhealthy",
-            "connected": False,
-            "error": str(e)
-        }
+        logger.warning(f"Direct database connection failed: {e}")
+        
+        # Fallback to Supabase client
+        try:
+            # Test Supabase connection by querying a system table
+            supabase_client = get_supabase_client()
+            result = supabase_client.table('stores').select('id').limit(1).execute()
+            return {
+                "status": "healthy",
+                "connected": True,
+                "method": "supabase_client",
+                "result": "Supabase client connected"
+            }
+        except Exception as supabase_error:
+            logger.error(f"Supabase health check failed: {supabase_error}")
+            return {
+                "status": "unhealthy",
+                "connected": False,
+                "error": f"Direct: {str(e)}, Supabase: {str(supabase_error)}"
+            }
 
 
 # Database initialization queries

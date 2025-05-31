@@ -282,3 +282,5 @@ QUICK_START.md
 start-dev.sh
 build.sh
 health-check.sh
+
+migrations/

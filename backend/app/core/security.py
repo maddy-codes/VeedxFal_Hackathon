@@ -17,8 +17,15 @@ logger = logging.getLogger(__name__)
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Supabase client
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+# Supabase client - handle invalid credentials gracefully in development
+try:
+    supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+except Exception as e:
+    if settings.is_development:
+        logger.warning(f"Failed to initialize Supabase client: {e}. Using mock client for development.")
+        supabase = None
+    else:
+        raise
 
 
 class SecurityManager:
@@ -27,6 +34,7 @@ class SecurityManager:
     def __init__(self):
         self.pwd_context = pwd_context
         self.supabase = supabase
+        self._supabase_available = supabase is not None
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash."""
@@ -75,12 +83,14 @@ class SecurityManager:
     async def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """Authenticate user with Supabase."""
         try:
+            logger.info(f"[REAL SUPABASE] Attempting to authenticate user with email: {email}")
             response = self.supabase.auth.sign_in_with_password({
                 "email": email,
                 "password": password
             })
             
             if response.user:
+                logger.info(f"[REAL SUPABASE] Successfully authenticated user: {response.user.id}")
                 return {
                     "id": response.user.id,
                     "email": response.user.email,
@@ -89,10 +99,45 @@ class SecurityManager:
                     "refresh_token": response.session.refresh_token if response.session else None,
                 }
             
+            logger.warning(f"[REAL SUPABASE] Authentication failed - no user returned")
             return None
             
         except Exception as e:
-            logger.error(f"Authentication failed: {e}")
+            logger.error(f"[REAL SUPABASE] Authentication failed: {e}")
+            return None
+    
+    async def sign_up_user(self, email: str, password: str, user_metadata: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+        """Sign up a new user with Supabase."""
+        try:
+            logger.info(f"[REAL SUPABASE] Attempting to sign up user with email: {email}")
+            signup_data = {
+                "email": email,
+                "password": password
+            }
+            
+            if user_metadata:
+                signup_data["options"] = {"data": user_metadata}
+                logger.info(f"[REAL SUPABASE] Including user metadata: {user_metadata}")
+            
+            logger.info(f"[REAL SUPABASE] Making Supabase API call to sign_up")
+            response = self.supabase.auth.sign_up(signup_data)
+            
+            if response.user:
+                logger.info(f"[REAL SUPABASE] Successfully created user with ID: {response.user.id}")
+                return {
+                    "id": response.user.id,
+                    "email": response.user.email,
+                    "user_metadata": response.user.user_metadata,
+                    "access_token": response.session.access_token if response.session else None,
+                    "refresh_token": response.session.refresh_token if response.session else None,
+                    "email_confirmed": response.user.email_confirmed_at is not None,
+                }
+            
+            logger.warning(f"[REAL SUPABASE] Signup response did not contain user data")
+            return None
+            
+        except Exception as e:
+            logger.error(f"[REAL SUPABASE] User signup failed: {e}")
             return None
     
     async def refresh_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
@@ -116,10 +161,12 @@ class SecurityManager:
     async def get_user_from_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Get user information from access token."""
         try:
+            logger.info(f"[REAL SUPABASE] Verifying token with Supabase API")
             # Verify token with Supabase
             response = self.supabase.auth.get_user(token)
             
             if response.user:
+                logger.info(f"[REAL SUPABASE] Successfully retrieved user from token: {response.user.id}")
                 return {
                     "id": response.user.id,
                     "email": response.user.email,
@@ -127,10 +174,11 @@ class SecurityManager:
                     "app_metadata": response.user.app_metadata,
                 }
             
+            logger.warning(f"[REAL SUPABASE] Token verification returned no user")
             return None
             
         except Exception as e:
-            logger.warning(f"User retrieval from token failed: {e}")
+            logger.warning(f"[REAL SUPABASE] User retrieval from token failed: {e}")
             return None
     
     async def sign_out(self, token: str) -> bool:

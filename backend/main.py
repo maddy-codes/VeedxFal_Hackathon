@@ -23,16 +23,22 @@ from app.core.logging import setup_logging
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    logging.info("Starting Retail AI Advisor API...")
-    await database.connect()
-    logging.info("Database connected successfully")
+    logging.warning("Starting Retail AI Advisor API...")
+    try:
+        await database.connect()
+        logging.warning("Database connected successfully")
+    except Exception as e:
+        logging.error(f"Database connection failed, continuing without it: {e}")
     
     yield
     
     # Shutdown
-    logging.info("Shutting down Retail AI Advisor API...")
-    await database.disconnect()
-    logging.info("Database disconnected")
+    logging.warning("Shutting down Retail AI Advisor API...")
+    try:
+        await database.disconnect()
+        logging.warning("Database disconnected")
+    except Exception as e:
+        logging.error(f"Database disconnect failed: {e}")
 
 
 # Setup logging
@@ -89,6 +95,34 @@ async def health_check():
         "version": "1.0.0",
         "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/api/v1/health/supabase", include_in_schema=False)
+async def supabase_health_check():
+    """Supabase connection health check endpoint."""
+    from app.core.database import check_database_health
+    
+    try:
+        health_status = await check_database_health()
+        return {
+            "service": "supabase",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": health_status,
+            "supabase_url": settings.SUPABASE_URL,
+            "connection_status": "connected" if health_status.get("connected") else "disconnected"
+        }
+    except Exception as e:
+        return {
+            "service": "supabase",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": {
+                "status": "unhealthy",
+                "connected": False,
+                "error": str(e)
+            },
+            "supabase_url": settings.SUPABASE_URL,
+            "connection_status": "disconnected"
+        }
 
 
 @app.get("/", include_in_schema=False)
