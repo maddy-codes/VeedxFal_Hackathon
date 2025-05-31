@@ -42,13 +42,37 @@ export default function SignupPage() {
       setIsLoading(true);
       setError(null);
       
-      // TODO: Implement signup API call
-      console.log('Signup data:', data);
-      
-      // For now, redirect to login
-      router.push('/auth/login');
+      // Call signup API
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/v1/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || 'Signup failed');
+      }
+
+      // Handle successful signup
+      if (result.email_confirmed && result.access_token) {
+        // User is automatically logged in
+        localStorage.setItem('access_token', result.access_token);
+        router.push('/dashboard');
+      } else {
+        // Email confirmation required
+        router.push('/auth/login?message=Please check your email to confirm your account');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Signup failed. Please try again.');
+      setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

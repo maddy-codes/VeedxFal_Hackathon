@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
+    "@sentry/nextjs": "^9.24.0",
     "@supabase/supabase-js": "^2.49.8",
     "@types/chart.js": "^2.9.41",
     "axios": "^1.9.0",
