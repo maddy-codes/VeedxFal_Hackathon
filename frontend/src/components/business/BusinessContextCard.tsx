@@ -73,7 +73,7 @@ export function BusinessContextCard({ shopId }: BusinessContextCardProps) {
 
       // Try streaming endpoint first
       try {
-        const response = await fetch(`/api/v1/trend-analysis/business-context-stream/${shopId}`, {
+        const response = await fetch(`http://localhost:8000/api/v1/trend-analysis/business-context-stream/${shopId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
             'Accept': 'text/event-stream',
@@ -122,7 +122,7 @@ export function BusinessContextCard({ shopId }: BusinessContextCardProps) {
         console.warn('Streaming failed, falling back to regular API:', streamError);
         
         // Fallback to regular API
-        const response = await fetch(`/api/v1/trend-analysis/business-context/${shopId}`, {
+        const response = await fetch(`http://localhost:8000/api/v1/trend-analysis/business-context/${shopId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
             'Content-Type': 'application/json',

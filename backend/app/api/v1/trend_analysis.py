@@ -449,7 +449,8 @@ async def health_check():
 
 @router.get("/business-context-stream/{shop_id}")
 async def get_business_context_stream(
-    shop_id: int
+    shop_id: int,
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Generate business context summary using Azure AI with streaming response.
@@ -583,7 +584,8 @@ async def get_business_context_stream(
 
 @router.get("/business-context/{shop_id}")
 async def get_business_context(
-    shop_id: int
+    shop_id: int,
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Generate business context summary using Azure AI.

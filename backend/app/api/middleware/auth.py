@@ -41,9 +41,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/shopify/webhooks/app_uninstalled",
         # Trend analysis health check
         "/api/v1/trend-analysis/health",
-        # Business context endpoints (temporary for demo)
-        "/api/v1/trend-analysis/business-context/1",
-        "/api/v1/trend-analysis/business-context-stream/1",
     }
     
     def __init__(self, app):
