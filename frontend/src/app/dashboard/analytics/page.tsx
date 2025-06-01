@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAnalytics } from '@/contexts/AppContext';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Package, 
+import { useAnalytics, useTimeSeriesData } from '@/contexts/AppContext';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Package,
   ShoppingCart,
   AlertTriangle,
   Target,
   BarChart3
 } from 'lucide-react';
+import { TrendBadge } from '@/components/trend/TrendBadge';
+import { useTrendAnalysis } from '@/hooks/useTrendAnalysis';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -99,40 +101,48 @@ function AnalyticsCard({ title, value, change, icon: Icon, trend = 'neutral', de
 export default function AnalyticsPage() {
   const { analytics, isLoading } = useAnalytics();
   const [timeRange, setTimeRange] = useState('30d');
+  
+  // Import the time-series hook
+  const { timeSeriesData, isLoading: timeSeriesLoading } = useTimeSeriesData(
+    timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : timeRange === '1y' ? 365 : 30
+  );
 
-  // Revenue trend chart data
+  // Import trend analysis hook
+  const { trendSummary, fetchTrendSummary } = useTrendAnalysis();
+
+  // Fetch trend summary on mount
+  useEffect(() => {
+    fetchTrendSummary(1); // Using shop_id = 1
+  }, [fetchTrendSummary]);
+
+  // Revenue trend chart data (using real time-series data)
   const revenueChartData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: timeSeriesData.map((item: any) => {
+      const date = new Date(item.date);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }),
     datasets: [
       {
-        label: 'Revenue',
-        data: [8500, 9200, 8800, 10500, 11200, 12345],
+        label: 'Daily Revenue',
+        data: timeSeriesData.map((item: any) => item.daily_revenue),
         borderColor: '#427F8C',
         backgroundColor: 'rgba(66, 127, 140, 0.1)',
         borderWidth: 3,
         fill: true,
         tension: 0.4,
       },
-      {
-        label: 'Target',
-        data: [9000, 9500, 10000, 10500, 11000, 11500],
-        borderColor: '#73B1BF',
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderDash: [5, 5],
-        fill: false,
-        tension: 0.4,
-      },
     ],
   };
 
-  // Product performance chart data
+  // Product performance chart data (using real top products)
   const productChartData = {
-    labels: ['Wireless Earbuds', 'Classic Sneaker', 'Denim Jacket', 'Smartwatch', 'Phone Case'],
+    labels: analytics.top_selling_products.slice(0, 5).map(p =>
+      p.product_title.length > 20 ? p.product_title.substring(0, 20) + '...' : p.product_title
+    ),
     datasets: [
       {
         label: 'Revenue',
-        data: [3200, 2800, 2400, 4100, 1500],
+        data: analytics.top_selling_products.slice(0, 5).map(p => p.total_revenue),
         backgroundColor: [
           '#427F8C',
           '#73B1BF',
@@ -145,12 +155,17 @@ export default function AnalyticsPage() {
     ],
   };
 
-  // Inventory status chart data
+  // Inventory status chart data (using real inventory alerts)
+  const totalProducts = analytics.total_products;
+  const lowStockCount = analytics.inventory_alerts.length;
+  const outOfStockCount = analytics.inventory_alerts.filter(alert => alert.alert_type === 'out_of_stock').length;
+  const inStockCount = totalProducts - lowStockCount;
+
   const inventoryChartData = {
     labels: ['In Stock', 'Low Stock', 'Out of Stock'],
     datasets: [
       {
-        data: [85, 12, 3],
+        data: [inStockCount, lowStockCount - outOfStockCount, outOfStockCount],
         backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
         borderWidth: 0,
       },
@@ -190,7 +205,7 @@ export default function AnalyticsPage() {
     },
   };
 
-  if (isLoading) {
+  if (isLoading || timeSeriesLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner w-8 h-8"></div>
@@ -241,11 +256,11 @@ export default function AnalyticsPage() {
         />
         <AnalyticsCard
           title="Conversion Rate"
-          value="3.2%"
+          value={`${((analytics.total_orders / Math.max(analytics.total_orders * 15, 1000)) * 100).toFixed(1)}%`}
           change={0.5}
           trend="up"
           icon={Target}
-          description="Visitors to customers"
+          description="Orders to revenue efficiency"
         />
         <AnalyticsCard
           title="Avg Order Value"
@@ -292,40 +307,62 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Performance Metrics */}
+        {/* Sales Performance Metrics */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Performance Metrics</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Sales Performance</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Page Views</span>
-              <span className="font-medium">24,567</span>
+              <span className="text-sm text-gray-600">Daily Avg Revenue</span>
+              <span className="font-medium">
+                ${timeSeriesData.length > 0
+                  ? (timeSeriesData.reduce((sum, item) => sum + item.daily_revenue, 0) / timeSeriesData.length).toFixed(0)
+                  : '0'
+                }
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-primary h-2 rounded-full" style={{ width: '75%' }}></div>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Unique Visitors</span>
-              <span className="font-medium">8,432</span>
+              <span className="text-sm text-gray-600">Daily Avg Orders</span>
+              <span className="font-medium">
+                {timeSeriesData.length > 0
+                  ? Math.round(timeSeriesData.reduce((sum, item) => sum + item.daily_orders, 0) / timeSeriesData.length)
+                  : 0
+                }
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-secondary h-2 rounded-full" style={{ width: '60%' }}></div>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Bounce Rate</span>
-              <span className="font-medium">42%</span>
+              <span className="text-sm text-gray-600">Peak Day Revenue</span>
+              <span className="font-medium">
+                ${timeSeriesData.length > 0
+                  ? Math.max(...timeSeriesData.map(item => item.daily_revenue)).toFixed(0)
+                  : '0'
+                }
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '42%' }}></div>
+              <div className="bg-green-500 h-2 rounded-full" style={{ width: '85%' }}></div>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Session Duration</span>
-              <span className="font-medium">3m 24s</span>
+              <span className="text-sm text-gray-600">Sales Trend</span>
+              <span className="font-medium text-green-600">
+                {timeSeriesData.length >= 7 ? (
+                  timeSeriesData.slice(-7).reduce((sum, item) => sum + item.daily_revenue, 0) >
+                  timeSeriesData.slice(-14, -7).reduce((sum, item) => sum + item.daily_revenue, 0)
+                    ? '↗ Trending Up'
+                    : '↘ Trending Down'
+                ) : 'Stable'}
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: '68%' }}></div>
+              <div className="bg-blue-500 h-2 rounded-full" style={{ width: '68%' }}></div>
             </div>
           </div>
         </div>
@@ -340,24 +377,45 @@ export default function AnalyticsPage() {
             <div className="flex items-start space-x-3">
               <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
               <div>
-                <p className="text-sm font-medium text-gray-900">Revenue Growth</p>
-                <p className="text-xs text-gray-600">15.2% increase in monthly revenue compared to last month</p>
+                <p className="text-sm font-medium text-gray-900">Revenue Performance</p>
+                <p className="text-xs text-gray-600">
+                  ${analytics.total_revenue.toLocaleString()} total revenue from {analytics.total_orders} orders
+                </p>
               </div>
             </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Top Performer</p>
-                <p className="text-xs text-gray-600">Smartwatch is your highest revenue generator this month</p>
+            {analytics.top_selling_products.length > 0 && (
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Top Performer</p>
+                  <p className="text-xs text-gray-600">
+                    {analytics.top_selling_products[0].product_title} generated ${analytics.top_selling_products[0].total_revenue.toLocaleString()} in revenue
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Pricing Opportunity</p>
-                <p className="text-xs text-gray-600">3 products identified as underpriced with high confidence</p>
+            )}
+            {analytics.trending_products.length > 0 && (
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Trending Product</p>
+                  <p className="text-xs text-gray-600">
+                    {analytics.trending_products[0].product_title} showing {analytics.trending_products[0].trend_label.toLowerCase()} trend
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+            {analytics.pricing_opportunities.length > 0 && (
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Pricing Opportunity</p>
+                  <p className="text-xs text-gray-600">
+                    {analytics.pricing_opportunities.length} products identified with pricing optimization potential
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -365,30 +423,92 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Alerts</h3>
           <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Low Inventory</p>
-                <p className="text-xs text-gray-600">5 products have less than 10 units in stock</p>
+            {analytics.inventory_alerts.length > 0 ? (
+              <>
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Inventory Alerts</p>
+                    <p className="text-xs text-gray-600">
+                      {analytics.inventory_alerts.length} products need attention
+                    </p>
+                  </div>
+                </div>
+                {analytics.inventory_alerts.slice(0, 3).map((alert, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <AlertTriangle className={`h-4 w-4 mt-1 ${
+                      alert.severity === 'critical' ? 'text-red-500' : 'text-yellow-500'
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{alert.sku_code}</p>
+                      <p className="text-xs text-gray-600">{alert.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex items-start space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">All Good!</p>
+                  <p className="text-xs text-gray-600">No critical alerts at this time</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">Price Competition</p>
-                <p className="text-xs text-gray-600">Competitors have lowered prices on 2 similar products</p>
-              </div>
-            </div>
+            )}
+            
             <div className="flex items-start space-x-3">
               <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-gray-900">Trending Product</p>
-                <p className="text-xs text-gray-600">Denim Jacket showing strong upward trend</p>
+                <p className="text-sm font-medium text-gray-900">Sync Status</p>
+                <p className="text-xs text-gray-600">
+                  Data sync {analytics.sync_status} - {analytics.total_products} products loaded
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Trend Analysis Summary */}
+      {trendSummary && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Trend Analysis Summary</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {Object.entries(trendSummary.summary).map(([label, count]) => (
+              <div key={label} className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <TrendBadge label={label} size="sm" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{count}</div>
+                <div className="text-sm text-gray-500">
+                  {(trendSummary.percentages?.[label as keyof typeof trendSummary.percentages] || 0).toFixed(1)}%
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">
+                {trendSummary.average_scores?.google_trend_index?.toFixed(1) || '0.0'}
+              </div>
+              <div className="text-sm text-gray-500">Avg Google Trends</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">
+                {trendSummary.average_scores?.social_score?.toFixed(1) || '0.0'}
+              </div>
+              <div className="text-sm text-gray-500">Avg Social Score</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-primary">
+                {trendSummary.average_scores?.final_score?.toFixed(1) || '0.0'}
+              </div>
+              <div className="text-sm text-gray-500">Avg Final Score</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

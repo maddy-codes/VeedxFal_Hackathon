@@ -2,14 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useAnalytics } from '@/contexts/AppContext';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Package, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Package,
   ShoppingCart,
-  Users
+  Users,
+  Store,
+  Plus
 } from 'lucide-react';
+import { ShopifyConnectionStatus } from '@/types';
+import { apiClient } from '@/lib/api';
+import Link from 'next/link';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -87,6 +92,9 @@ function MetricCard({ title, value, change, icon: Icon, trend = 'neutral' }: Met
 export default function DashboardPage() {
   const { analytics, isLoading } = useAnalytics();
   const [chartData, setChartData] = useState<any>(null);
+  const [shopifyStatus, setShopifyStatus] = useState<ShopifyConnectionStatus>({
+    isConnected: false
+  });
 
   useEffect(() => {
     // Generate sample chart data for monthly earnings
@@ -111,7 +119,28 @@ export default function DashboardPage() {
     };
 
     setChartData(generateChartData());
+    loadShopifyStatus();
   }, []);
+
+  const loadShopifyStatus = async () => {
+    try {
+      const stores = await apiClient.getShopifyStores() as any[];
+      if (stores.length > 0) {
+        const activeStore = stores.find((store: any) => store.is_active) || stores[0];
+        const stats = await apiClient.getShopifyStoreStats(activeStore.id) as any;
+        setShopifyStatus({
+          isConnected: true,
+          store: activeStore,
+          stats,
+          lastSync: stats?.last_sync_at,
+          syncStatus: stats?.sync_status
+        });
+      }
+    } catch (error) {
+      // User might not have Shopify connected yet
+      setShopifyStatus({ isConnected: false });
+    }
+  };
 
   const chartOptions = {
     responsive: true,
@@ -183,6 +212,58 @@ export default function DashboardPage() {
             icon={Users}
           />
         </div>
+      </div>
+
+      {/* Shopify Connection Status */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Shopify Integration</h3>
+          {shopifyStatus.isConnected ? (
+            <Link href="/dashboard/shopify">
+              <button className="btn btn-outline btn-sm">
+                Manage Store
+              </button>
+            </Link>
+          ) : (
+            <Link href="/dashboard/shopify">
+              <button className="btn btn-primary btn-sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Connect Store
+              </button>
+            </Link>
+          )}
+        </div>
+        
+        {shopifyStatus.isConnected && shopifyStatus.store ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Store className="h-8 w-8 text-green-600 mr-3" />
+              <div>
+                <p className="font-medium text-gray-900">{shopifyStatus.store.shop_name}</p>
+                <p className="text-sm text-gray-600">{shopifyStatus.store.shop_domain}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                <span className="text-sm font-medium">Connected</span>
+              </div>
+              {shopifyStatus.lastSync && (
+                <p className="text-xs text-gray-500">
+                  Last sync: {new Date(shopifyStatus.lastSync).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 mb-2">No Shopify store connected</p>
+            <p className="text-sm text-gray-500">
+              Connect your Shopify store to sync products and get AI-powered insights
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Charts Section */}

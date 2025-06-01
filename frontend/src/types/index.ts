@@ -220,3 +220,180 @@ export interface SyncStatus {
   message?: string;
   last_sync_at?: string;
 }
+
+// Shopify types
+export interface ShopifyStore {
+  id: number;
+  user_id: string;
+  shop_domain: string;
+  shop_name: string;
+  shop_id?: number;
+  access_token: string;
+  scope: string;
+  is_active: boolean;
+  shop_config?: Record<string, any>;
+  last_sync_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShopifyStoreStats {
+  shop_id: number;
+  total_products: number;
+  active_products: number;
+  total_orders: number;
+  orders_last_30_days: number;
+  total_revenue: number;
+  revenue_last_30_days: number;
+  last_sync_at?: string;
+  sync_status?: string;
+}
+
+export interface ShopifySyncJob {
+  id: number;
+  shop_id: number;
+  sync_type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  progress?: number;
+  total_items?: number;
+  processed_items?: number;
+  error_message?: string;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShopifyOAuthRequest {
+  shop_domain: string;
+  redirect_uri?: string;
+}
+
+export interface ShopifyOAuthCallback {
+  shop_domain: string;
+  code: string;
+  state?: string;
+}
+
+export interface ShopifyConnectionStatus {
+  isConnected: boolean;
+  store?: ShopifyStore;
+  stats?: ShopifyStoreStats;
+  lastSync?: string;
+  syncStatus?: string;
+}
+
+// Trend Analysis types
+export interface TrendUpdate {
+  sku_code: string;
+  google_trend_index: number;
+  social_score: number;
+  final_score: number;
+  label: string;
+  computed_at: string;
+}
+
+export interface TrendInsight {
+  id: number;
+  shop_id: number;
+  sku_code: string;
+  google_trend_index: number;
+  social_score: number;
+  final_score: number;
+  label: string;
+  computed_at: string;
+  created_at: string;
+}
+
+export interface TrendSummary {
+  shop_id: number;
+  total_products: number;
+  summary: {
+    Hot: number;
+    Rising: number;
+    Steady: number;
+    Declining: number;
+  };
+  percentages: {
+    Hot: number;
+    Rising: number;
+    Steady: number;
+    Declining: number;
+  };
+  average_scores: {
+    google_trend_index: number;
+    social_score: number;
+    final_score: number;
+  };
+  last_updated: string | null;
+}
+
+export interface TrendingProductData {
+  sku_code: string;
+  product_title: string;
+  current_price: number;
+  image_url?: string;
+  status: string;
+  trend_data: {
+    google_trend_index: number;
+    social_score: number;
+    final_score: number;
+    label: string;
+    computed_at: string;
+  };
+}
+
+export interface TrendAnalysisRequest {
+  sku_code: string;
+  product_title: string;
+  category?: string;
+  brand?: string;
+}
+
+export interface BatchTrendAnalysisRequest {
+  products: TrendAnalysisRequest[];
+}
+
+export interface TrendHealthCheck {
+  service: string;
+  status: string;
+  timestamp: string;
+  checks: {
+    google_trends: {
+      status: string;
+      error?: string;
+    };
+    database: {
+      status: string;
+      response_time_ms?: number;
+    };
+    cache: {
+      status: string;
+      cached_items?: number;
+      cache_ttl_seconds?: number;
+    };
+  };
+}
+
+export interface TrendAnalysisResponse {
+  insights: TrendInsight[];
+  count: number;
+  shop_id: number;
+  sku_code?: string;
+  max_age_hours: number;
+}
+
+export interface TrendingProductsResponse {
+  shop_id: number;
+  label_filter?: string;
+  trending_products: TrendingProductData[];
+  count: number;
+  limit: number;
+}
+
+export interface BatchAnalysisResponse {
+  results: TrendUpdate[];
+  total_products: number;
+  successful_analyses: number;
+  failed_analyses: number;
+}

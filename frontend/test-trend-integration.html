@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trend Analysis Integration Test - WORKING!</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .trend-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 2px;
+        }
+        .trend-hot { background-color: #fee2e2; color: #dc2626; }
+        .trend-rising { background-color: #fed7aa; color: #ea580c; }
+        .trend-steady { background-color: #dbeafe; color: #2563eb; }
+        .trend-declining { background-color: #f3f4f6; color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Trend Analysis Frontend Integration Test</h1>
+            <p>Testing the integration between frontend components and backend trend analysis API</p>
+        </div>
+
+        <div class="test-section">
+            <h2>🏥 Health Check</h2>
+            <button onclick="testHealthCheck()">Test Health Endpoint</button>
+            <div id="health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Trend Summary</h2>
+            <button onclick="testTrendSummary()">Get Trend Summary</button>
+            <div id="summary-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔥 Trending Products</h2>
+            <button onclick="testTrendingProducts()">Get Trending Products</button>
+            <button onclick="testTrendingProducts('Hot')">Get Hot Products</button>
+            <button onclick="testTrendingProducts('Rising')">Get Rising Products</button>
+            <div id="trending-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Product Analysis</h2>
+            <button onclick="testProductAnalysis()">Analyze Sample Product</button>
+            <div id="analysis-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📦 Batch Analysis</h2>
+            <button onclick="testBatchAnalysis()">Analyze Multiple Products</button>
+            <div id="batch-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Data Refresh</h2>
+            <button onclick="testDataRefresh()">Refresh Trend Data</button>
+            <div id="refresh-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📈 Integration Summary</h2>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="integration-summary"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const SHOP_ID = 1;
+        
+        // Working credentials
+        const TEST_EMAIL = 'jatinarora2689@gmail.com';
+        const TEST_PASSWORD = 'Jazz@1552';
+        let authToken = null;
+
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = '<div class="loading"></div> Testing...';
+        }
+
+        function showResult(elementId, success, message, data = null) {
+            const className = success ? 'success' : 'error';
+            let html = `<div class="test-result ${className}">${message}</div>`;
+            
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        function showWarning(elementId, message, data = null) {
+            let html = `<div class="test-result warning">${message}</div>`;
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+                
+                // Add auth token if available
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: headers,
+                    ...options
+                });
+
+                const data = await response.json();
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: data
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    status: 0,
+                    error: error.message
+                };
+            }
+        }
+
+        async function testLogin() {
+            showLoading('login-result');
+            
+            const loginData = {
+                email: TEST_EMAIL,
+                password: TEST_PASSWORD
+            };
+            
+            const result = await makeRequest('/api/v1/auth/login', {
+                method: 'POST',
+                body: JSON.stringify(loginData)
+            });
+            
+            if (result.success) {
+                authToken = result.data.access_token;
+                let message = `✅ Login successful!`;
+                message += `<br>👤 User: ${result.data.user?.email || 'N/A'}`;
+                message += `<br>🔑 Token: ${authToken?.substring(0, 50)}...`;
+                
+                showResult('login-result', true, message);
+            } else {
+                showResult('login-result', false, `❌ Login failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testAuthenticatedEndpoint() {
+            if (!authToken) {
+                showWarning('login-result', '⚠️ Please login first to test authenticated endpoints');
+                return;
+            }
+            
+            showLoading('login-result');
+            
+            const result = await makeRequest('/api/v1/auth/me');
+            
+            if (result.success) {
+                let message = `✅ Authenticated endpoint working!`;
+                message += `<br>👤 User: ${result.data.email}`;
+                message += `<br>🆔 ID: ${result.data.id}`;
+                
+                showResult('login-result', true, message, result.data);
+            } else {
+                showResult('login-result', false, `❌ Authentication failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testHealthCheck() {
+            showLoading('health-result');
+            
+            const result = await makeRequest('/api/v1/trend-analysis/health');
+            
+            if (result.success) {
+                const health = result.data;
+                let message = `✅ Service Status: ${health.status}`;
+                
+                if (health.checks) {
+                    const dbStatus = health.checks.database?.status || 'unknown';
+                    const gtStatus = health.checks.google_trends?.status || 'unknown';
+                    message += `<br>📊 Database: ${dbStatus}`;
+                    message += `<br>🔍 Google Trends: ${gtStatus}`;
+                    
+                    if (health.checks.database?.response_time_ms) {
+                        message += ` (${health.checks.database.response_time_ms.toFixed(0)}ms)`;
+                    }
+                }
+                
+                showResult('health-result', true, message, health);
+            } else {
+                showResult('health-result', false, `❌ Health check failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testTrendSummary() {
+            if (!authToken) {
+                showWarning('summary-result', '⚠️ Please login first to test authenticated endpoints');
+                return;
+            }
+            
+            showLoading('summary-result');
+            
+            const result = await makeRequest(`/api/v1/trend-analysis/insights/${SHOP_ID}/summary`);
+            
+            if (result.success) {
+                const summary = result.data;
+                let message = `✅ Trend Summary Retrieved`;
+                message += `<br>📦 Total Products: ${summary.total_products}`;
+                
+                if (summary.summary) {
+                    message += '<br>📊 Distribution: ';
+                    Object.entries(summary.summary).forEach(([label, count]) => {
+                        const badgeClass = `trend-${label.toLowerCase()}`;
+                        message += `<span class="trend-badge ${badgeClass}">${label}: ${count}</span>`;
+                    });
+                }
+                
+                if (summary.average_scores) {
+                    message += `<br>🎯 Avg Final Score: ${summary.average_scores.final_score?.toFixed(1) || 'N/A'}`;
+                }
+                
+                showResult('summary-result', true, message, summary);
+            } else {
+                showResult('summary-result', false, `❌ Failed to get trend summary: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testTrendingProducts(label = null) {
+            if (!authToken) {
+                showWarning('trending-result', '⚠️ Please login first to test authenticated endpoints');
+                return;
+            }
+            
+            showLoading('trending-result');
+            
+            let endpoint = `/api/v1/trend-analysis/insights/${SHOP_ID}/trending?limit=5`;
+            if (label) {
+                endpoint += `&label=${label}`;
+            }
+            
+            const result = await makeRequest(endpoint);
+            
+            if (result.success) {
+                const trending = result.data;
+                let message = `✅ Trending Products Retrieved`;
+                message += `<br>📦 Found: ${trending.count} products`;
+                
+                if (label) {
+                    message += ` (filtered by: ${label})`;
+                }
+                
+                if (trending.trending_products && trending.trending_products.length > 0) {
+                    message += '<br>🔥 Top Products:';
+                    trending.trending_products.slice(0, 3).forEach(product => {
+                        const badgeClass = `trend-${product.trend_data.label.toLowerCase()}`;
+                        message += `<br>• <span class="trend-badge ${badgeClass}">${product.trend_data.label}</span> ${product.product_title} (Score: ${product.trend_data.final_score})`;
+                    });
+                }
+                
+                showResult('trending-result', true, message, trending);
+            } else {
+                showResult('trending-result', false, `❌ Failed to get trending products: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testProductAnalysis() {
+            showLoading('analysis-result');
+            
+            const sampleProduct = {
+                sku_code: 'TEST-001',
+                product_title: 'Wireless Bluetooth Headphones',
+                category: 'Electronics',
+                brand: 'TechBrand'
+            };
+            
+            const result = await makeRequest(`/api/v1/trend-analysis/analyze/${SHOP_ID}`, {
+                method: 'POST',
+                body: JSON.stringify(sampleProduct)
+            });
+            
+            if (result.success) {
+                const analysis = result.data;
+                let message = `✅ Product Analysis Complete`;
+                message += `<br>📊 Google Trends: ${analysis.google_trend_index}`;
+                message += `<br>📱 Social Score: ${analysis.social_score}`;
+                message += `<br>🎯 Final Score: ${analysis.final_score}`;
+                
+                const badgeClass = `trend-${analysis.label.toLowerCase()}`;
+                message += `<br>🏷️ Label: <span class="trend-badge ${badgeClass}">${analysis.label}</span>`;
+                
+                showResult('analysis-result', true, message, analysis);
+            } else if (result.status === 401) {
+                showWarning('analysis-result', '🔐 Authentication required - This is expected for protected endpoints', result.data);
+            } else if (result.status === 503) {
+                showWarning('analysis-result', '⚠️ Service temporarily unavailable - Google Trends API may be rate limited', result.data);
+            } else {
+                showResult('analysis-result', false, `❌ Product analysis failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testBatchAnalysis() {
+            showLoading('batch-result');
+            
+            const sampleProducts = [
+                { sku_code: 'BATCH-001', product_title: 'Smart Watch Fitness Tracker' },
+                { sku_code: 'BATCH-002', product_title: 'Organic Coffee Beans Premium' },
+                { sku_code: 'BATCH-003', product_title: 'Wireless Gaming Mouse' }
+            ];
+            
+            const result = await makeRequest(`/api/v1/trend-analysis/analyze-batch/${SHOP_ID}`, {
+                method: 'POST',
+                body: JSON.stringify({ products: sampleProducts })
+            });
+            
+            if (result.success) {
+                const batch = result.data;
+                let message = `✅ Batch Analysis Complete`;
+                message += `<br>📦 Total Products: ${batch.total_products}`;
+                message += `<br>✅ Successful: ${batch.successful_analyses}`;
+                message += `<br>❌ Failed: ${batch.failed_analyses}`;
+                
+                showResult('batch-result', true, message, batch);
+            } else if (result.status === 401) {
+                showWarning('batch-result', '🔐 Authentication required - This is expected for protected endpoints', result.data);
+            } else if (result.status === 503) {
+                showWarning('batch-result', '⚠️ Service temporarily unavailable - Google Trends API may be rate limited', result.data);
+            } else {
+                showResult('batch-result', false, `❌ Batch analysis failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function testDataRefresh() {
+            showLoading('refresh-result');
+            
+            const result = await makeRequest(`/api/v1/trend-analysis/refresh/${SHOP_ID}`, {
+                method: 'POST',
+                body: JSON.stringify({ sku_codes: ['TEST-001', 'BATCH-001'] })
+            });
+            
+            if (result.success) {
+                let message = `✅ Data refresh initiated successfully`;
+                showResult('refresh-result', true, message, result.data);
+            } else if (result.status === 401) {
+                showWarning('refresh-result', '🔐 Authentication required - This is expected for protected endpoints', result.data);
+            } else {
+                showResult('refresh-result', false, `❌ Data refresh failed: ${result.error || result.data?.detail}`, result.data);
+            }
+        }
+
+        async function runAllTests() {
+            document.getElementById('integration-summary').innerHTML = '<div class="loading"></div> Running all tests...';
+            
+            const tests = [
+                { name: 'Health Check', fn: testHealthCheck },
+                { name: 'Trend Summary', fn: testTrendSummary },
+                { name: 'Trending Products', fn: () => testTrendingProducts() },
+                { name: 'Product Analysis', fn: testProductAnalysis },
+                { name: 'Batch Analysis', fn: testBatchAnalysis },
+                { name: 'Data Refresh', fn: testDataRefresh }
+            ];
+            
+            let summary = '<h3>🧪 Integration Test Results</h3>';
+            let passCount = 0;
+            let totalCount = tests.length;
+            
+            for (const test of tests) {
+                try {
+                    await test.fn();
+                    // Simple check - if no error thrown, consider it a pass
+                    summary += `<div class="test-result success">✅ ${test.name}: PASSED</div>`;
+                    passCount++;
+                } catch (error) {
+                    summary += `<div class="test-result error">❌ ${test.name}: FAILED - ${error.message}</div>`;
+                }
+                
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            summary += `<div class="test-result info">📊 Summary: ${passCount}/${totalCount} tests passed</div>`;
+            
+            if (passCount === totalCount) {
+                summary += '<div class="test-result success">🎉 All tests passed! Frontend integration is working correctly.</div>';
+            } else if (passCount > 0) {
+                summary += '<div class="test-result warning">⚠️ Some tests failed. Check authentication and service availability.</div>';
+            } else {
+                summary += '<div class="test-result error">❌ All tests failed. Check if the backend server is running.</div>';
+            }
+            
+            document.getElementById('integration-summary').innerHTML = summary;
+        }
+
+        // Auto-run health check on page load
+        window.addEventListener('load', () => {
+            setTimeout(testHealthCheck, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -2,14 +2,15 @@
 
 import { ReactNode } from 'react';
 import { useAuth, withAuth } from '@/contexts/AuthContext';
-import { 
-  Home, 
-  BarChart3, 
-  TrendingUp, 
-  Settings, 
+import {
+  Home,
+  BarChart3,
+  TrendingUp,
+  Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Store
 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ interface DashboardLayoutProps {
 
 const sidebarItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Shopify Integration', href: '/dashboard/shopify', icon: Store },
   { name: 'Product Insights', href: '/dashboard/insights', icon: TrendingUp },
   { name: 'Pricing Calculator', href: '/dashboard/pricing', icon: BarChart3 },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
@@ -140,6 +142,7 @@ function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex flex-1 items-center">
               <h2 className="text-2xl font-bold text-gray-900">
                 {pathname === '/dashboard' && 'Dashboard Overview'}
+                {pathname === '/dashboard/shopify' && 'Shopify Integration'}
                 {pathname === '/dashboard/insights' && 'Product Insights'}
                 {pathname === '/dashboard/pricing' && 'Cost-Plus Pricing Calculator'}
                 {pathname === '/dashboard/analytics' && 'Analytics'}

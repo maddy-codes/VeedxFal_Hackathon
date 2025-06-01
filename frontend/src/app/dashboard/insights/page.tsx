@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useApp, useProductFilter } from '@/contexts/AppContext';
 import { Play, Pause, Volume2, Maximize } from 'lucide-react';
+import { TrendAnalysisCard } from '@/components/trend/TrendAnalysisCard';
+import { TrendBadge, TrendIndicator } from '@/components/trend/TrendBadge';
 
 interface VideoPlayerProps {
   src?: string;
@@ -249,6 +251,11 @@ export default function ProductInsightsPage() {
           <VideoPlayer title="AI Retail Advisor - Product Insights" />
         </div>
 
+        {/* Trend Analysis Card */}
+        <div className="mb-8">
+          <TrendAnalysisCard shopId={1} />
+        </div>
+
         {/* Filter Tabs */}
         <div className="flex space-x-2 mb-6">
           {filterOptions.map((filter) => (
@@ -275,6 +282,9 @@ export default function ProductInsightsPage() {
                     Product
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trend
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Recommendation
                   </th>
                 </tr>
@@ -296,10 +306,22 @@ export default function ProductInsightsPage() {
                             {product.product_title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            SKU: {product.sku_code}
+                            SKU: {product.sku_code} • ${product.current_price.toFixed(2)}
                           </div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {product.trend_label && (
+                        <div className="space-y-1">
+                          <TrendBadge label={product.trend_label} size="sm" />
+                          {product.trend_score && (
+                            <div className="text-xs text-gray-500">
+                              Score: {product.trend_score}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">

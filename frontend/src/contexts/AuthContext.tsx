@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, Store, AuthContextType } from '@/types';
-import apiClient from '@/lib/api';
+import { apiClient } from '@/lib/api';
 
 // Auth state type
 interface AuthState {
@@ -86,12 +86,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Try to get current user
-      const user = await apiClient.getCurrentUser();
+      const user = await apiClient.getCurrentUser() as User;
       dispatch({ type: 'SET_USER', payload: user });
 
       // Try to get current store
       try {
-        const store = await apiClient.getCurrentStore();
+        const store = await apiClient.getCurrentStore() as Store;
         dispatch({ type: 'SET_STORE', payload: store });
       } catch (storeError: any) {
         // User might not have a store yet, that's okay
@@ -117,12 +117,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      const response = await apiClient.login({ email, password });
-      dispatch({ type: 'SET_USER', payload: response.user });
+      const response = await apiClient.login({ email, password }) as any;
+      dispatch({ type: 'SET_USER', payload: response.user as User });
 
       // Try to get store after login
       try {
-        const store = await apiClient.getCurrentStore();
+        const store = await apiClient.getCurrentStore() as Store;
         dispatch({ type: 'SET_STORE', payload: store });
       } catch (storeError: any) {
         // User might not have a store yet
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await apiClient.refreshToken();
       // Optionally refresh user data
-      const user = await apiClient.getCurrentUser();
+      const user = await apiClient.getCurrentUser() as User;
       dispatch({ type: 'SET_USER', payload: user });
     } catch (error) {
       console.error('Token refresh error:', error);
