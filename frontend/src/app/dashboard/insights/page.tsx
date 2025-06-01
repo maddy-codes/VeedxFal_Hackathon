@@ -2,16 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import AutoAvatarBriefing from '@/components/avatar/AutoAvatarBriefing';
+import AIBusinessManager from '@/components/avatar/AIBusinessManager';
 import { BusinessContextCard } from '@/components/business/BusinessContextCard';
 import { TrendAnalysisCard } from '@/components/trend/TrendAnalysisCard';
 import { TrendBadge } from '@/components/trend/TrendBadge';
 import { useTrendAnalysis } from '@/hooks/useTrendAnalysis';
 import { TrendSummary, TrendingProductData } from '@/types';
-import { TrendingUp, TrendingDown, BarChart3, Package, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Package, RefreshCw, MessageCircle, Activity, Brain } from 'lucide-react';
 
 const InsightsPage: React.FC = () => {
   const { store } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
   
   const {
     trendSummary,
@@ -22,6 +23,12 @@ const InsightsPage: React.FC = () => {
     fetchTrendingProducts,
     refreshTrendData
   } = useTrendAnalysis();
+
+  const tabs = [
+    { id: 'overview', name: 'Overview', icon: Activity },
+    { id: 'ai-manager', name: 'AI Business Manager', icon: MessageCircle },
+    { id: 'analysis', name: 'Trend Analysis', icon: Brain },
+  ];
 
   useEffect(() => {
     if (store?.id) {
@@ -49,39 +56,52 @@ const InsightsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Business Insights</h1>
-            <p className="text-gray-600 mt-1">
-              AI-powered analysis and personalized video briefings for {store.shop_name}
-            </p>
-          </div>
-          <button
-            onClick={handleRefreshAll}
-            disabled={isTrendLoading}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`h-4 w-4 ${isTrendLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh All</span>
-          </button>
-        </div>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <Icon className="w-5 h-5 mr-2" />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top Row - Avatar Briefing and Business Context */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Auto Avatar Briefing - Replaces video section */}
-          <div className="lg:col-span-1">
-            <AutoAvatarBriefing shopId={store.id} />
-          </div>
-
-          {/* Business Context */}
-          <div className="lg:col-span-1">
-            <BusinessContextCard shopId={store.id} />
-          </div>
-        </div>
+      {/* Tab Content */}
+      <div className="space-y-6">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Refresh Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={handleRefreshAll}
+                disabled={isTrendLoading}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <RefreshCw className={`h-4 w-4 ${isTrendLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh All</span>
+              </button>
+            </div>
+            {/* Business Context */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="lg:col-span-2">
+                <BusinessContextCard shopId={store.id} />
+              </div>
+            </div>
 
         {/* Trend Summary Cards */}
         {trendSummary && (
@@ -237,30 +257,41 @@ const InsightsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Integration Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            🎬 AI Avatar Business Briefings
-          </h3>
-          <p className="text-blue-800 mb-4">
-            Get personalized video briefings from Jaz, your AI business analyst at BizPredict. 
-            Each briefing includes your latest store performance, trend analysis, and strategic recommendations.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-blue-700">Real-time business data</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-blue-700">AI-powered insights</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-blue-700">Professional avatars</span>
+            {/* AI Manager CTA */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    🎬 Ready for Your Business Briefing?
+                  </h3>
+                  <p className="text-gray-700 mb-4">
+                    Get personalized video insights from Jaz, your AI business manager.
+                    Discover key performance metrics, trends, and strategic recommendations.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('ai-manager')}
+                  className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  Speak with Jaz
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'ai-manager' && (
+          <div className="space-y-6">
+            <AIBusinessManager shopId={store.id} />
+          </div>
+        )}
+
+        {activeTab === 'analysis' && (
+          <div className="space-y-6">
+            <TrendAnalysisCard shopId={store.id} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -141,10 +141,8 @@ async def test_business_context_integration():
         # Test business context endpoint
         print("\n1. Testing business context generation...")
         try:
-            params = {"shop_id": 1}
             response = await client.get(
-                f"{BASE_URL}/api/v1/trend-analysis/business-context",
-                params=params
+                f"{BASE_URL}/api/v1/trend-analysis/business-context/1"
             )
             print(f"Status: {response.status_code}")
             if response.status_code == 200:
@@ -161,10 +159,8 @@ async def test_business_context_integration():
         # Test trend analysis
         print("\n2. Testing trend analysis...")
         try:
-            params = {"shop_id": 1}
             response = await client.get(
-                f"{BASE_URL}/api/v1/trend-analysis/summary",
-                params=params
+                f"{BASE_URL}/api/v1/trend-analysis/insights/1/summary"
             )
             print(f"Status: {response.status_code}")
             if response.status_code == 200:

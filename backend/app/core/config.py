@@ -5,8 +5,12 @@ Application configuration management using Pydantic settings.
 import os
 from typing import List, Optional
 
+from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -46,6 +50,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_VERSION: str = Field(default="2024-02-15-preview", description="API version (for compatibility)")
     ELEVENLABS_API_KEY: Optional[str] = Field(default=None, description="ElevenLabs API key")
     FAL_KEY: Optional[str] = Field(default=None, description="fal.ai API key for video generation")
+    ZAP_CAP_KEY: Optional[str] = Field(default=None, description="ZapCap API key")
     # VEED_API_KEY: Optional[str] = Field(default=None, description="VEED.io API key - replaced by fal.ai")
     
     # Redis Configuration

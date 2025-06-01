@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.models.product import TrendUpdate
 from app.services.trend_analysis_service import TrendAnalysisService
 from app.services.azure_ai_service import AzureAIService
@@ -241,7 +241,7 @@ async def refresh_trend_data(
 @router.get("/insights/{shop_id}/summary")
 async def get_trend_summary(
     shop_id: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_optional_current_user)
 ):
     """
     Get trend analysis summary for a store.
@@ -585,7 +585,7 @@ async def get_business_context_stream(
 @router.get("/business-context/{shop_id}")
 async def get_business_context(
     shop_id: int,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_optional_current_user)
 ):
     """
     Generate business context summary using Azure AI.

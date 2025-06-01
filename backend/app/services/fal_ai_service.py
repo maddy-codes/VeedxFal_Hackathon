@@ -5,7 +5,7 @@ FAL AI service for generating AI avatars from business summaries.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import fal_client
 from fastapi import HTTPException, status
@@ -30,8 +30,12 @@ class FALAIService(LoggerMixin):
         # Configure FAL client if API key is available
         self.fal_api_key = getattr(settings, 'FAL_KEY', None)
         if self.fal_api_key:
+            # Set the API key in the environment for fal_client
+            import os
+            os.environ['FAL_KEY'] = self.fal_api_key
+            # Also set the client API key directly
             fal_client.api_key = self.fal_api_key
-            logger.info("FAL AI client configured successfully")
+            logger.info(f"FAL AI client configured successfully with key: {self.fal_api_key[:10]}...")
         else:
             logger.warning("FAL API key not configured, will use mock responses")
     
@@ -119,7 +123,16 @@ class FALAIService(LoggerMixin):
             if include_business_context:
                 # Get business data and trend analysis
                 business_data = await self.azure_ai_service.get_business_data(shop_id)
-                trend_summary = await self.trend_analysis_service.get_trend_summary(shop_id)
+                
+                # Get trend insights instead of trend summary
+                try:
+                    trend_insights = await self.trend_analysis_service.get_trend_insights(shop_id, max_age_hours=24)
+                    # Create a simple trend summary from insights
+                    trend_summary = self._create_trend_summary_from_insights(trend_insights)
+                except Exception as e:
+                    logger.warning(f"Failed to get trend insights: {e}")
+                    # Use mock trend summary
+                    trend_summary = self._create_mock_trend_summary(shop_id)
                 
                 # Generate business summary
                 business_summary = await self.azure_ai_service.generate_business_summary(
@@ -184,6 +197,63 @@ I recommend continuing your current strategy while keeping an eye on emerging tr
 
         return script
     
+    def _create_trend_summary_from_insights(self, trend_insights: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create a trend summary from trend insights data."""
+        if not trend_insights:
+            return self._create_mock_trend_summary(1)
+        
+        # Calculate summary statistics
+        label_counts = {"Hot": 0, "Rising": 0, "Steady": 0, "Declining": 0}
+        total_google_trend = 0
+        total_social_score = 0
+        total_final_score = 0
+        
+        for insight in trend_insights:
+            label_counts[insight.get("label", "Steady")] += 1
+            total_google_trend += insight.get("google_trend_index", 50)
+            total_social_score += insight.get("social_score", 50)
+            total_final_score += insight.get("final_score", 50)
+        
+        total_products = len(trend_insights)
+        
+        return {
+            "total_products": total_products,
+            "summary": label_counts,
+            "percentages": {
+                label: round((count / total_products) * 100, 1)
+                for label, count in label_counts.items()
+            },
+            "average_scores": {
+                "google_trend_index": round(total_google_trend / total_products, 1),
+                "social_score": round(total_social_score / total_products, 1),
+                "final_score": round(total_final_score / total_products, 1)
+            }
+        }
+    
+    def _create_mock_trend_summary(self, shop_id: int) -> Dict[str, Any]:
+        """Create a mock trend summary for fallback."""
+        return {
+            "shop_id": shop_id,
+            "total_products": 50,
+            "summary": {
+                "Hot": 12,
+                "Rising": 18,
+                "Steady": 15,
+                "Declining": 5
+            },
+            "percentages": {
+                "Hot": 24.0,
+                "Rising": 36.0,
+                "Steady": 30.0,
+                "Declining": 10.0
+            },
+            "average_scores": {
+                "google_trend_index": 72.3,
+                "social_score": 68.7,
+                "final_score": 70.5
+            }
+        }
+    
     async def _call_fal_ai_avatar(self, avatar_id: str, text: str) -> Dict[str, Any]:
         """
         Call FAL AI avatar generation API.
@@ -204,22 +274,48 @@ I recommend continuing your current strategy while keeping an eye on emerging tr
         request_start_time = datetime.utcnow()
         
         try:
-            def on_queue_update(update):
-                """Handle queue updates from FAL AI."""
-                if isinstance(update, fal_client.InProgress):
-                    for log in update.logs:
-                        logger.info(f"FAL AI progress: {log.get('message', 'Processing...')}")
+            # Map our avatar IDs to FAL AI avatar IDs
+            fal_avatar_mapping = {
+                "marcus_primary": "marcus_primary",
+                "sarah_executive": "emily_primary",  # Use emily as fallback for sarah
+                "alex_casual": "any_male_primary"
+            }
             
-            # Call FAL AI avatar generation
-            result = fal_client.subscribe(
+            fal_avatar_id = fal_avatar_mapping.get(avatar_id, "marcus_primary")
+            
+            # Use submit instead of subscribe for better timeout handling
+            handler = fal_client.submit(
                 "veed/avatars/text-to-video",
                 arguments={
-                    "avatar_id": avatar_id,
+                    "avatar_id": fal_avatar_id,
                     "text": text
-                },
-                with_logs=True,
-                on_queue_update=on_queue_update,
+                }
             )
+            
+            logger.info(f"FAL AI request submitted with ID: {handler.request_id}")
+            
+            # Try to get result with timeout
+            import asyncio
+            try:
+                # Wait for result with 30 second timeout
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(lambda: fal_client.result("veed/avatars/text-to-video", handler.request_id)),
+                    timeout=30.0
+                )
+            except asyncio.TimeoutError:
+                logger.warning("FAL AI request timed out, returning processing status")
+                # Return a "processing" response that the frontend can handle
+                return {
+                    "video_url": None,
+                    "duration_seconds": None,
+                    "format": "mp4",
+                    "resolution": "1080p",
+                    "file_size_bytes": None,
+                    "status": "processing",
+                    "request_id": handler.request_id,
+                    "message": "Video is being generated. This may take a few minutes.",
+                    "processing": True
+                }
             
             request_duration = (datetime.utcnow() - request_start_time).total_seconds()
             
@@ -241,21 +337,25 @@ I recommend continuing your current strategy while keeping an eye on emerging tr
             )
             
             # Extract video URL and metadata from result
-            if isinstance(result, dict):
+            # FAL AI returns: {"video": {"url": "...", "content_type": "video/mp4", ...}}
+            if isinstance(result, dict) and "video" in result:
+                video_data = result["video"]
                 return {
-                    "video_url": result.get("video", {}).get("url") if isinstance(result.get("video"), dict) else result.get("video"),
-                    "duration_seconds": result.get("duration"),
+                    "video_url": video_data.get("url"),
+                    "duration_seconds": 45,  # Estimated duration
                     "format": "mp4",
-                    "resolution": result.get("resolution", "1080p"),
-                    "file_size_bytes": result.get("file_size"),
+                    "resolution": "1080p",
+                    "file_size_bytes": video_data.get("file_size"),
+                    "content_type": video_data.get("content_type", "video/mp4"),
                     "fal_request_id": result.get("request_id"),
                     "raw_result": result
                 }
             else:
-                # Handle non-dict responses
+                # Handle unexpected response format
+                logger.warning(f"Unexpected FAL AI response format: {result}")
                 return {
                     "video_url": str(result) if result else None,
-                    "duration_seconds": None,
+                    "duration_seconds": 45,
                     "format": "mp4",
                     "resolution": "1080p",
                     "file_size_bytes": None,

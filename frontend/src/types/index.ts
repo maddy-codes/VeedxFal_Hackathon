@@ -422,6 +422,11 @@ export interface AvatarVideo {
   status: string;
   mock_response?: boolean;
   message?: string;
+  // Subtitle properties
+  subtitles_added?: boolean;
+  subtitle_error?: string;
+  original_video_url?: string;
+  subtitle_task_id?: string;
 }
 
 export interface AvatarGenerationRequest {
