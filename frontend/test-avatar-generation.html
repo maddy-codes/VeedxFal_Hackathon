@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Avatar Generation Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    🎬 AI Avatar Business Briefing
+                </h1>
+                <p class="text-gray-600">
+                    Generate personalized business briefings with AI avatars powered by FAL AI and VEED
+                </p>
+            </div>
+
+            <!-- Service Status -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Service Status</h2>
+                <div id="serviceStatus" class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Avatar Service:</span>
+                        <span id="avatarServiceStatus" class="px-2 py-1 rounded-full text-xs bg-gray-100">Checking...</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Available Avatars:</span>
+                        <span id="avatarCount" class="text-sm text-gray-900">-</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">API Configuration:</span>
+                        <span id="apiConfig" class="text-sm text-gray-900">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avatar Selection -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Choose Your AI Analyst</h2>
+                <div id="avatarSelection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Avatars will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Generation Options -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-lg font-semibold mb-4">Briefing Options</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="flex items-center space-x-3">
+                            <input type="checkbox" id="includeBusinessContext" checked 
+                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <span class="text-sm text-gray-700">Include detailed business analysis</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1 ml-7">
+                            Generate comprehensive insights with your latest store data and trends
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Store ID</label>
+                        <input type="number" id="shopId" value="1" min="1" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <button id="generateBtn" onclick="generateAvatarVideo()" 
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span id="generateBtnText">🎬 Generate AI Briefing</span>
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-semibold mb-4">Generated Briefing</h2>
+                <div id="videoContainer" class="space-y-4">
+                    <!-- Video and details will be shown here -->
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="errorContainer" class="hidden bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                <div class="flex">
+                    <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="ml-3">
+                        <p id="errorMessage" class="text-sm text-red-800"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Documentation -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-semibold mb-4">API Endpoints</h2>
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-mono">GET</span>
+                        <code class="text-gray-700">/api/v1/video/avatar/health</code>
+                        <span class="text-gray-500">- Service health check</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-mono">GET</span>
+                        <code class="text-gray-700">/api/v1/video/avatar/avatars</code>
+                        <span class="text-gray-500">- Available avatars</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">POST</span>
+                        <code class="text-gray-700">/api/v1/video/avatar/generate</code>
+                        <span class="text-gray-500">- Generate avatar video</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedAvatarId = 'marcus_primary';
+        let availableAvatars = [];
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServiceHealth();
+            loadAvailableAvatars();
+        });
+
+        async function checkServiceHealth() {
+            try {
+                const response = await fetch('/api/v1/video/avatar/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const status = data.data.status;
+                    const statusElement = document.getElementById('avatarServiceStatus');
+                    
+                    if (status === 'healthy') {
+                        statusElement.className = 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-800';
+                        statusElement.textContent = 'Live';
+                    } else if (status === 'configured_mock') {
+                        statusElement.className = 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800';
+                        statusElement.textContent = 'Demo Mode';
+                    } else {
+                        statusElement.className = 'px-2 py-1 rounded-full text-xs bg-red-100 text-red-800';
+                        statusElement.textContent = 'Error';
+                    }
+                    
+                    document.getElementById('apiConfig').textContent = 
+                        data.data.api_key_configured ? 'Configured' : 'Mock Mode';
+                } else {
+                    document.getElementById('avatarServiceStatus').textContent = 'Error';
+                }
+            } catch (error) {
+                console.error('Health check failed:', error);
+                document.getElementById('avatarServiceStatus').textContent = 'Error';
+            }
+        }
+
+        async function loadAvailableAvatars() {
+            try {
+                const response = await fetch('/api/v1/video/avatar/avatars');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    availableAvatars = data.data.avatars;
+                    selectedAvatarId = data.data.default_avatar;
+                    
+                    document.getElementById('avatarCount').textContent = data.data.total;
+                    
+                    renderAvatars();
+                } else {
+                    showError('Failed to load available avatars');
+                }
+            } catch (error) {
+                console.error('Failed to load avatars:', error);
+                showError('Error loading avatars');
+            }
+        }
+
+        function renderAvatars() {
+            const container = document.getElementById('avatarSelection');
+            container.innerHTML = '';
+            
+            availableAvatars.forEach(avatar => {
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = `relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                    selectedAvatarId === avatar.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                }`;
+                avatarDiv.onclick = () => selectAvatar(avatar.id);
+                
+                avatarDiv.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                                ${avatar.name.charAt(0)}
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900">${avatar.name}</p>
+                            <p class="text-xs text-gray-500 truncate">${avatar.description}</p>
+                        </div>
+                    </div>
+                    ${selectedAvatarId === avatar.id ? `
+                        <div class="absolute top-2 right-2">
+                            <div class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                                    <path d="M6.564.75l-3.59 3.612-1.538-1.55L0 4.26l2.974 2.99L8 2.193z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                container.appendChild(avatarDiv);
+            });
+        }
+
+        function selectAvatar(avatarId) {
+            selectedAvatarId = avatarId;
+            renderAvatars();
+        }
+
+        async function generateAvatarVideo() {
+            const generateBtn = document.getElementById('generateBtn');
+            const generateBtnText = document.getElementById('generateBtnText');
+            const shopId = document.getElementById('shopId').value;
+            const includeBusinessContext = document.getElementById('includeBusinessContext').checked;
+            
+            // Disable button and show loading
+            generateBtn.disabled = true;
+            generateBtnText.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating Your Briefing...
+            `;
+            
+            hideError();
+            hideResults();
+            
+            try {
+                const params = new URLSearchParams({
+                    shop_id: shopId,
+                    avatar_id: selectedAvatarId,
+                    include_business_context: includeBusinessContext.toString()
+                });
+                
+                const response = await fetch(`/api/v1/video/avatar/generate?${params}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResults(data.data);
+                } else {
+                    showError(data.detail || 'Failed to generate avatar video');
+                }
+            } catch (error) {
+                console.error('Generation failed:', error);
+                showError('Error generating avatar video');
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtnText.textContent = '🎬 Generate AI Briefing';
+            }
+        }
+
+        function showResults(videoData) {
+            const resultsContainer = document.getElementById('results');
+            const videoContainer = document.getElementById('videoContainer');
+            
+            const selectedAvatar = availableAvatars.find(a => a.id === videoData.avatar_id);
+            
+            videoContainer.innerHTML = `
+                <!-- Video Player -->
+                <div class="bg-black rounded-lg overflow-hidden">
+                    <video controls class="w-full h-64 object-cover">
+                        <source src="${videoData.video_url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                
+                <!-- Video Details -->
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-gray-700">Duration:</span>
+                        <span class="ml-2 text-gray-600">${videoData.duration_seconds}s</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Avatar:</span>
+                        <span class="ml-2 text-gray-600">${selectedAvatar ? selectedAvatar.name : videoData.avatar_id}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Resolution:</span>
+                        <span class="ml-2 text-gray-600">${videoData.resolution}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-gray-700">Generated:</span>
+                        <span class="ml-2 text-gray-600">${new Date(videoData.generated_at).toLocaleTimeString()}</span>
+                    </div>
+                </div>
+                
+                <!-- Script Preview -->
+                <div>
+                    <span class="font-medium text-gray-700">Script Preview:</span>
+                    <p class="mt-1 text-sm text-gray-600 bg-gray-50 p-3 rounded border">
+                        ${videoData.script_content.substring(0, 300)}${videoData.script_content.length > 300 ? '...' : ''}
+                    </p>
+                </div>
+                
+                ${videoData.mock_response ? `
+                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <p class="text-sm text-yellow-800">⚠️ ${videoData.message}</p>
+                    </div>
+                ` : ''}
+                
+                <!-- Action Buttons -->
+                <div class="flex space-x-3">
+                    <a href="${videoData.video_url}" download="business-briefing-${videoData.avatar_id}.mp4" 
+                       class="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                        Download Video
+                    </a>
+                    <button onclick="copyToClipboard('${videoData.video_url}')" 
+                            class="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
+                        Copy Link
+                    </button>
+                </div>
+            `;
+            
+            resultsContainer.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorContainer').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorContainer').classList.add('hidden');
+        }
+
+        function hideResults() {
+            document.getElementById('results').classList.add('hidden');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Could show a toast notification here
+                console.log('Link copied to clipboard');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -18,6 +18,7 @@ from app.models.video import (
     VideoListResponse,
     VideoStatus,
 )
+from app.services.fal_ai_service import FALAIService
 
 logger = logging.getLogger(__name__)
 
@@ -358,4 +359,129 @@ async def record_video_view(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Video view service error"
+        )
+
+
+@router.post(
+    "/avatar/generate",
+    responses={
+        200: {"description": "Avatar video generation started"},
+        401: {"model": ErrorResponse, "description": "Authentication required"},
+        403: {"model": ErrorResponse, "description": "Access denied"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+    summary="Generate AI avatar video",
+    description="Generate AI avatar video with business summary",
+)
+async def generate_avatar_video(
+    shop_id: int = Query(..., description="Store ID"),
+    avatar_id: str = Query("marcus_primary", description="Avatar ID to use"),
+    include_business_context: bool = Query(True, description="Include detailed business context"),
+    user_id: str = Depends(get_current_user_id),
+    verified_shop_id: int = Depends(verify_store_access),
+):
+    """Generate AI avatar video with business summary."""
+    
+    try:
+        # Initialize FAL AI service
+        fal_service = FALAIService()
+        
+        # Generate avatar video
+        avatar_result = await fal_service.generate_business_avatar_video(
+            shop_id=shop_id,
+            avatar_id=avatar_id,
+            include_business_context=include_business_context
+        )
+        
+        # Log avatar generation request
+        log_business_event(
+            "avatar_video_generated",
+            user_id=user_id,
+            shop_id=shop_id,
+            avatar_id=avatar_id,
+            include_business_context=include_business_context
+        )
+        
+        return {
+            "status": "success",
+            "message": "Avatar video generated successfully",
+            "data": avatar_result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Avatar video generation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Avatar video generation service error"
+        )
+
+
+@router.get(
+    "/avatar/avatars",
+    responses={
+        200: {"description": "Available avatars retrieved"},
+        401: {"model": ErrorResponse, "description": "Authentication required"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+    summary="Get available avatars",
+    description="Get list of available AI avatars",
+)
+async def get_available_avatars(
+    user_id: str = Depends(get_current_user_id),
+):
+    """Get list of available AI avatars."""
+    
+    try:
+        # Initialize FAL AI service
+        fal_service = FALAIService()
+        
+        # Get available avatars
+        avatars_result = await fal_service.get_available_avatars()
+        
+        return {
+            "status": "success",
+            "message": "Available avatars retrieved successfully",
+            "data": avatars_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Get available avatars error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Avatar service error"
+        )
+
+
+@router.get(
+    "/avatar/health",
+    responses={
+        200: {"description": "Avatar service health check"},
+        500: {"model": ErrorResponse, "description": "Internal server error"},
+    },
+    summary="Avatar service health check",
+    description="Check health status of avatar generation service",
+)
+async def avatar_health_check():
+    """Check health status of avatar generation service."""
+    
+    try:
+        # Initialize FAL AI service
+        fal_service = FALAIService()
+        
+        # Perform health check
+        health_result = await fal_service.health_check()
+        
+        return {
+            "status": "success",
+            "message": "Avatar service health check completed",
+            "data": health_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Avatar health check error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Avatar health check service error"
         )

@@ -1,357 +1,269 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useApp, useProductFilter } from '@/contexts/AppContext';
-import { Play, Pause, Volume2, Maximize } from 'lucide-react';
-import { TrendAnalysisCard } from '@/components/trend/TrendAnalysisCard';
-import { TrendBadge, TrendIndicator } from '@/components/trend/TrendBadge';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import AutoAvatarBriefing from '@/components/avatar/AutoAvatarBriefing';
 import { BusinessContextCard } from '@/components/business/BusinessContextCard';
+import { TrendAnalysisCard } from '@/components/trend/TrendAnalysisCard';
+import { TrendBadge } from '@/components/trend/TrendBadge';
+import { useTrendAnalysis } from '@/hooks/useTrendAnalysis';
+import { TrendSummary, TrendingProductData } from '@/types';
+import { TrendingUp, TrendingDown, BarChart3, Package, RefreshCw } from 'lucide-react';
 
-interface VideoPlayerProps {
-  src?: string;
-  title?: string;
-}
+const InsightsPage: React.FC = () => {
+  const { store } = useAuth();
+  
+  const {
+    trendSummary,
+    trendingProducts,
+    isLoading: isTrendLoading,
+    error: trendError,
+    fetchTrendSummary,
+    fetchTrendingProducts,
+    refreshTrendData
+  } = useTrendAnalysis();
 
-function VideoPlayer({ src, title = "AI Advisor Video" }: VideoPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  useEffect(() => {
+    if (store?.id) {
+      fetchTrendSummary(store.id);
+      fetchTrendingProducts(store.id);
+    }
+  }, [store?.id]);
 
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
+  const handleRefreshAll = async () => {
+    if (store?.id) {
+      await refreshTrendData(store.id);
+    }
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  if (!store) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Store Connected</h2>
+          <p className="text-gray-600">Please connect your store to view insights.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <div className="relative bg-gray-900 aspect-video">
-        {/* Video placeholder */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Play className="h-8 w-8 text-white ml-1" />
-            </div>
-            <p className="text-lg font-medium">{title}</p>
-            <p className="text-sm text-gray-300">Click to play AI advisor insights</p>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Business Insights</h1>
+            <p className="text-gray-600 mt-1">
+              AI-powered analysis and personalized video briefings for {store.shop_name}
+            </p>
+          </div>
+          <button
+            onClick={handleRefreshAll}
+            disabled={isTrendLoading}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${isTrendLoading ? 'animate-spin' : ''}`} />
+            <span>Refresh All</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Row - Avatar Briefing and Business Context */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Auto Avatar Briefing - Replaces video section */}
+          <div className="lg:col-span-1">
+            <AutoAvatarBriefing shopId={store.id} />
+          </div>
+
+          {/* Business Context */}
+          <div className="lg:col-span-1">
+            <BusinessContextCard shopId={store.id} />
           </div>
         </div>
 
-        {/* Play button overlay */}
-        <button
-          onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-40 transition-all"
-        >
-          <div className="w-20 h-20 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-            {isPlaying ? (
-              <Pause className="h-10 w-10 text-gray-900" />
-            ) : (
-              <Play className="h-10 w-10 text-gray-900 ml-1" />
-            )}
-          </div>
-        </button>
-      </div>
+        {/* Trend Summary Cards */}
+        {trendSummary && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Hot Products</p>
+                  <p className="text-2xl font-bold text-red-600">{trendSummary.summary.Hot}</p>
+                  <p className="text-xs text-gray-500">{trendSummary.percentages.Hot.toFixed(1)}% of total</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
 
-      {/* Video controls */}
-      <div className="bg-gray-800 text-white p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={togglePlay}
-              className="flex items-center justify-center w-8 h-8 bg-primary rounded hover:bg-primary/80 transition-colors"
-            >
-              {isPlaying ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4 ml-0.5" />
-              )}
-            </button>
-            
-            <div className="flex items-center space-x-2">
-              <Volume2 className="h-4 w-4" />
-              <div className="w-16 h-1 bg-gray-600 rounded">
-                <div className="w-3/4 h-full bg-white rounded"></div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Rising Products</p>
+                  <p className="text-2xl font-bold text-orange-600">{trendSummary.summary.Rising}</p>
+                  <p className="text-xs text-gray-500">{trendSummary.percentages.Rising.toFixed(1)}% of total</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-orange-500" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Steady Products</p>
+                  <p className="text-2xl font-bold text-blue-600">{trendSummary.summary.Steady}</p>
+                  <p className="text-xs text-gray-500">{trendSummary.percentages.Steady.toFixed(1)}% of total</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-500" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Declining Products</p>
+                  <p className="text-2xl font-bold text-gray-600">{trendSummary.summary.Declining}</p>
+                  <p className="text-xs text-gray-500">{trendSummary.percentages.Declining.toFixed(1)}% of total</p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-gray-500" />
               </div>
             </div>
           </div>
+        )}
 
-          <div className="flex items-center space-x-4">
-            <span className="text-sm">
-              {formatTime(currentTime)} / {formatTime(duration || 180)}
-            </span>
-            <button className="hover:text-primary transition-colors">
-              <Maximize className="h-4 w-4" />
-            </button>
+        {/* Trend Analysis and Trending Products */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Trend Analysis Card */}
+          <div className="lg:col-span-1">
+            <TrendAnalysisCard shopId={store.id} />
           </div>
-        </div>
 
-        {/* Progress bar */}
-        <div className="w-full h-1 bg-gray-600 rounded cursor-pointer">
-          <div 
-            className="h-full bg-primary rounded transition-all"
-            style={{ width: `${(currentTime / (duration || 180)) * 100}%` }}
-          ></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface FilterTabProps {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  count?: number;
-}
-
-function FilterTab({ label, isActive, onClick, count }: FilterTabProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        px-4 py-2 text-sm font-medium rounded-md transition-colors
-        ${isActive 
-          ? 'bg-primary text-white' 
-          : 'text-gray-600 hover:text-primary hover:bg-gray-100'
-        }
-      `}
-    >
-      {label}
-      {count !== undefined && (
-        <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-          isActive ? 'bg-white text-primary' : 'bg-gray-200 text-gray-600'
-        }`}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
-export default function ProductInsightsPage() {
-  const { products, setProducts } = useApp();
-  const { selectedFilter, setSelectedFilter, filterOptions } = useProductFilter();
-
-  // Sample data matching the mockup exactly
-  const sampleProducts = [
-    {
-      sku_id: 1,
-      shop_id: 1,
-      sku_code: 'WE001',
-      product_title: 'Wireless Earbuds',
-      current_price: 49.99,
-      inventory_level: 25,
-      cost_price: 30.00,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      recommended_price: 59.99,
-      recommendation_type: 'underpriced',
-      pricing_reason: 'Increase price to $59.99',
-      confidence_score: 0.85,
-      trend_label: 'Stable',
-    },
-    {
-      sku_id: 2,
-      shop_id: 1,
-      sku_code: 'CS001',
-      product_title: 'Classic Sneaker',
-      current_price: 89.99,
-      inventory_level: 75,
-      cost_price: 45.00,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      recommendation_type: 'overstocked',
-      pricing_reason: 'Run a clearance sale',
-      confidence_score: 0.75,
-      trend_label: 'Declining',
-    },
-    {
-      sku_id: 3,
-      shop_id: 1,
-      sku_code: 'DJ001',
-      product_title: 'Denim Jacket',
-      current_price: 79.99,
-      inventory_level: 15,
-      cost_price: 40.00,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      trend_label: 'Hot',
-      trend_score: 85,
-      pricing_reason: 'Trending upward',
-      confidence_score: 0.90,
-    },
-    {
-      sku_id: 4,
-      shop_id: 1,
-      sku_code: 'SW001',
-      product_title: 'Smartwatch',
-      current_price: 199.99,
-      inventory_level: 8,
-      cost_price: 120.00,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      trend_label: 'Hot',
-      trend_score: 92,
-      pricing_reason: 'High demand currently',
-      confidence_score: 0.95,
-    },
-  ];
-
-  useEffect(() => {
-    setProducts(sampleProducts);
-  }, []); // Remove setProducts from dependency array to prevent infinite loop
-
-  const getRecommendationDisplay = (product: any) => {
-    if (product.recommendation_type === 'underpriced') {
-      return `Underpriced - ${product.pricing_reason}`;
-    }
-    if (product.recommendation_type === 'overstocked') {
-      return `Overstocked - ${product.pricing_reason}`;
-    }
-    if (product.trend_label === 'Hot') {
-      return `Hot - ${product.pricing_reason}`;
-    }
-    return product.pricing_reason || 'No specific recommendation';
-  };
-
-  const getFilteredProducts = () => {
-    if (selectedFilter === 'All') return sampleProducts;
-    
-    return sampleProducts.filter(product => {
-      switch (selectedFilter) {
-        case 'Underpriced':
-          return product.recommendation_type === 'underpriced';
-        case 'Overstocked':
-          return product.recommendation_type === 'overstocked';
-        case 'Hot':
-          return product.trend_label === 'Hot';
-        default:
-          return true;
-      }
-    });
-  };
-
-  const filteredProducts = getFilteredProducts();
-
-  return (
-    <div className="space-y-8">
-      {/* Product Insights Section */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Insights</h2>
-        
-        {/* Business Context Card - AI-powered business summary */}
-        <div className="mb-8">
-          <BusinessContextCard shopId={1} />
-        </div>
-
-        {/* Video Player */}
-        <div className="mb-8">
-          <VideoPlayer title="AI Retail Advisor - Product Insights" />
-        </div>
-
-        {/* Trend Analysis Card */}
-        <div className="mb-8">
-          <TrendAnalysisCard shopId={1} />
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex space-x-2 mb-6">
-          {filterOptions.map((filter) => (
-            <FilterTab
-              key={filter}
-              label={filter}
-              isActive={selectedFilter === filter}
-              onClick={() => setSelectedFilter(filter)}
-            />
-          ))}
-        </div>
-
-        {/* Product Recommendations Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Product Recommendations</h3>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Trend
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Recommendation
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.sku_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-12 w-12">
-                          <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <span className="text-gray-500 text-xs font-medium">
-                              {product.product_title.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {product.product_title}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            SKU: {product.sku_code} • ${product.current_price.toFixed(2)}
-                          </div>
+          {/* Trending Products */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Trending Products</h3>
+                <Package className="h-5 w-5 text-gray-400" />
+              </div>
+              
+              {isTrendLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : trendingProducts && trendingProducts.trending_products.length > 0 ? (
+                <div className="space-y-3">
+                  {trendingProducts.trending_products.slice(0, 5).map((product: TrendingProductData, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {product.product_title}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <TrendBadge label={product.trend_data.label} />
+                          <span className="text-xs text-gray-500">
+                            Score: {product.trend_data.final_score.toFixed(1)}
+                          </span>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.trend_label && (
-                        <div className="space-y-1">
-                          <TrendBadge label={product.trend_label} size="sm" />
-                          {product.trend_score && (
-                            <div className="text-xs text-gray-500">
-                              Score: {product.trend_score}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {getRecommendationDisplay(product)}
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-900">
+                          ${product.current_price.toFixed(2)}
+                        </p>
                       </div>
-                      {product.confidence_score && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Confidence: {(product.confidence_score * 100).toFixed(0)}%
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No products found for the selected filter.</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No trending products data available</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+
+
+        {/* Average Trend Scores */}
+        {trendSummary && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Average Trend Scores</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {trendSummary.average_scores.google_trend_index.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-600">Google Trends Index</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full" 
+                    style={{ width: `${trendSummary.average_scores.google_trend_index}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {trendSummary.average_scores.social_score.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-600">Social Score</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-purple-600 h-2 rounded-full" 
+                    style={{ width: `${trendSummary.average_scores.social_score}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {trendSummary.average_scores.final_score.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-600">Overall Trend Score</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${trendSummary.average_scores.final_score}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Integration Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+            🎬 AI Avatar Business Briefings
+          </h3>
+          <p className="text-blue-800 mb-4">
+            Get personalized video briefings from Jaz, your AI business analyst at BizPredict. 
+            Each briefing includes your latest store performance, trend analysis, and strategic recommendations.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-blue-700">Real-time business data</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-blue-700">AI-powered insights</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-blue-700">Professional avatars</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default InsightsPage;

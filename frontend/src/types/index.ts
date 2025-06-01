@@ -397,3 +397,74 @@ export interface BatchAnalysisResponse {
   successful_analyses: number;
   failed_analyses: number;
 }
+
+// Avatar types
+export interface Avatar {
+  id: string;
+  name: string;
+  description: string;
+  gender: string;
+  style: string;
+  preview_image: string;
+}
+
+export interface AvatarVideo {
+  video_url: string;
+  duration_seconds: number;
+  format: string;
+  resolution: string;
+  file_size_bytes?: number;
+  script_content: string;
+  avatar_id: string;
+  generated_at: string;
+  ai_provider: string;
+  model: string;
+  status: string;
+  mock_response?: boolean;
+  message?: string;
+}
+
+export interface AvatarGenerationRequest {
+  shop_id: number;
+  avatar_id?: string;
+  include_business_context?: boolean;
+}
+
+export interface AvailableAvatarsResponse {
+  avatars: Avatar[];
+  total: number;
+  default_avatar: string;
+  service_status: string;
+}
+
+export interface AvatarHealthCheck {
+  service: string;
+  status: string;
+  api_key_configured: boolean;
+  timestamp: string;
+  available_models: string[];
+  default_avatar: string;
+  connection_test?: string;
+  message?: string;
+}
+
+// Business Context types
+export interface BusinessContext {
+  executive_summary: string;
+  key_insights: string[];
+  performance_highlights: string[];
+  areas_for_improvement: string[];
+  strategic_recommendations: string[];
+  market_outlook: string;
+  priority_actions: string[];
+  generated_at: string;
+  shop_id: number;
+  ai_provider: string;
+  model: string;
+  data_sources: {
+    business_metrics: boolean;
+    product_data: boolean;
+    trend_analysis: boolean;
+    sales_data: boolean;
+  };
+}

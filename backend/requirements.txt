@@ -31,6 +31,7 @@ pytrends>=4.9.2
 beautifulsoup4>=4.12.2
 openai>=1.3.7
 shopifyapi>=12.0.0  # Shopify API client
+fal-client>=0.4.0  # FAL AI client for avatar generation
 
 # Azure Services
 azure-keyvault-secrets>=4.7.0
