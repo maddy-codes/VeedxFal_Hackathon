@@ -101,16 +101,31 @@ pkill -f "npm run dev"
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_APP_NAME=Retail AI Advisor
 NEXT_PUBLIC_APP_VERSION=1.0.0
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 ### Backend (.env)
 ```env
 ENVIRONMENT=development
 DEBUG=true
-DATABASE_URL=sqlite:///./test.db
+DATABASE_URL=postgresql://user:password@host:port/database
 SECRET_KEY=test-super-secret-key-for-development-only
 JWT_SECRET_KEY=test-jwt-secret-key-for-development
 ALLOWED_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Shopify Integration (Optional - for Shopify features)
+SHOPIFY_CLIENT_ID=your_shopify_client_id
+SHOPIFY_CLIENT_SECRET=your_shopify_client_secret
+SHOPIFY_API_VERSION=2024-07
+SHOPIFY_SCOPES=read_products,read_inventory,read_orders,read_price_rules
+SHOPIFY_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ## Troubleshooting
@@ -173,6 +188,50 @@ If you encounter dependency conflicts:
 - **CORS** is configured to allow frontend-backend communication
 - **Hot reload** is enabled for both frontend and backend in development mode
 
+## Shopify Integration Setup
+
+To enable Shopify integration features:
+
+### 1. Database Migration
+
+Run the Shopify migration to create required tables:
+
+```bash
+cd backend
+python run_shopify_migration.py
+```
+
+### 2. Shopify App Configuration
+
+1. Create a Shopify Partner account at [partners.shopify.com](https://partners.shopify.com)
+2. Create a new app in your Partner Dashboard
+3. Configure OAuth redirect URLs:
+   - Development: `http://localhost:3000/dashboard/shopify/callback`
+   - Production: `https://your-domain.com/dashboard/shopify/callback`
+4. Set required scopes: `read_products,read_inventory,read_orders,read_price_rules`
+5. Note your Client ID and Client Secret
+
+### 3. Environment Configuration
+
+Add Shopify credentials to your `.env` files:
+
+**Backend (.env)**:
+```bash
+SHOPIFY_CLIENT_ID=your_shopify_client_id
+SHOPIFY_CLIENT_SECRET=your_shopify_client_secret
+SHOPIFY_API_VERSION=2024-07
+SHOPIFY_SCOPES=read_products,read_inventory,read_orders,read_price_rules
+```
+
+### 4. Test Shopify Integration
+
+1. Start the application
+2. Navigate to `/dashboard/shopify`
+3. Connect a development store
+4. Test product synchronization
+
+For detailed Shopify setup instructions, see [docs/SHOPIFY_SETUP.md](./docs/SHOPIFY_SETUP.md).
+
 ## Production Deployment
 
 For production deployment:
@@ -186,6 +245,7 @@ For production deployment:
 3. Use a production database (PostgreSQL recommended)
 4. Configure proper authentication and security settings
 5. Set up reverse proxy (nginx recommended)
+6. Configure Shopify webhooks for production URLs
 
 ## Getting Help
 

@@ -31,6 +31,7 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     """Product creation model."""
     shopify_product_id: Optional[int] = Field(default=None, description="Shopify product ID")
+    shopify_variant_id: Optional[int] = Field(default=None, description="Shopify variant ID")
 
 
 class ProductUpdate(BaseModel):
@@ -57,6 +58,7 @@ class Product(ProductBase):
     sku_id: int = Field(..., description="Product SKU ID")
     shop_id: int = Field(..., description="Store ID")
     shopify_product_id: Optional[int] = Field(default=None, description="Shopify product ID")
+    shopify_variant_id: Optional[int] = Field(default=None, description="Shopify variant ID")
     created_at: datetime = Field(..., description="Product creation timestamp")
     updated_at: datetime = Field(..., description="Product last update timestamp")
 

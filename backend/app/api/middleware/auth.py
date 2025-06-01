@@ -9,7 +9,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.core.logging import log_security_event
+from app.core.logging import log_security_event, log_request_safely
 from app.core.security import get_security_manager
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/v1/auth/login",
         "/api/v1/auth/signup",
         "/api/v1/auth/refresh",
+        # Shopify OAuth and webhook endpoints
+        "/api/v1/shopify/oauth/callback",
+        "/api/v1/shopify/webhooks/orders_create",
+        "/api/v1/shopify/webhooks/orders_update",
+        "/api/v1/shopify/webhooks/products_create",
+        "/api/v1/shopify/webhooks/products_update",
+        "/api/v1/shopify/webhooks/app_uninstalled",
+        # Trend analysis health check
+        "/api/v1/trend-analysis/health",
     }
     
     def __init__(self, app):
@@ -85,9 +94,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.user_id = user["id"]
             request.state.token = token
             
-            # Only log authentication for sensitive endpoints
+            # Only log authentication for sensitive endpoints using safe logging
             if request.url.path.startswith("/api/v1/auth/") or request.url.path.startswith("/api/v1/sync/"):
-                logger.info(f"User {user['id']} authenticated for {request.url.path}")
+                log_request_safely(
+                    request,
+                    f"User authenticated for sensitive endpoint",
+                    level="info",
+                    user_id=user['id'],
+                    endpoint_type="sensitive"
+                )
             
         except HTTPException:
             raise

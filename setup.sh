@@ -159,7 +159,7 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=60
 
 # CORS Configuration
-ALLOWED_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+ALLOWED_ORIGINS=["*"]
 
 # Rate Limiting
 RATE_LIMIT_REQUESTS_PER_MINUTE=60
@@ -338,61 +338,3 @@ cat > QUICK_START.md << 'EOF'
 - pip
 
 ## Setup (First Time)
-```bash
-chmod +x setup.sh
-./setup.sh
-```
-
-## Development
-```bash
-# Start both frontend and backend
-./start-dev.sh
-
-# Or start individually:
-# Backend only
-cd backend && python3 main.py
-
-# Frontend only (in another terminal)
-cd frontend && npm run dev
-```
-
-## URLs
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
-
-## Health Check
-```bash
-./health-check.sh
-```
-
-## Production Build
-```bash
-./build.sh
-```
-
-## Troubleshooting
-- Make sure ports 3000 and 8000 are available
-- Check that all dependencies are installed
-- Verify Python and Node.js versions meet requirements
-EOF
-
-print_success "QUICK_START.md created"
-
-echo ""
-echo "🎉 Setup Complete!"
-echo "=================="
-print_success "Retail AI Advisor has been set up successfully!"
-echo ""
-echo "📋 Next Steps:"
-echo "   1. Run './start-dev.sh' to start both frontend and backend"
-echo "   2. Open http://localhost:3000 in your browser"
-echo "   3. Check API docs at http://localhost:8000/docs"
-echo ""
-echo "📚 Additional Commands:"
-echo "   - ./health-check.sh - Check if services are running"
-echo "   - ./build.sh - Build for production"
-echo "   - See QUICK_START.md for more details"
-echo ""
-print_warning "Note: This setup uses simplified authentication for demo purposes."
-print_warning "For production, configure proper authentication and external services."

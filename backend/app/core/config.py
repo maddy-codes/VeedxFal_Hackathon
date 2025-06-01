@@ -82,6 +82,10 @@ class Settings(BaseSettings):
         default=["read_products", "read_inventory", "read_orders", "read_price_rules"],
         description="Shopify OAuth scopes"
     )
+    WEBHOOK_BASE_URL: Optional[str] = Field(
+        default=None,
+        description="Base URL for webhooks (must be publicly accessible)"
+    )
     
     # Video Generation Settings
     DEFAULT_VOICE_ID: str = Field(

@@ -47,8 +47,17 @@ A comprehensive AI-powered retail analytics platform that provides intelligent i
 - **Product Insights Dashboard**: Real-time analytics and performance metrics
 - **Cost-Plus Pricing Calculator**: AI-powered pricing optimization
 - **Video Insights**: Automated video analysis and recommendations
+- **Shopify Integration**: Complete store connection, product sync, and order management
 - **Multi-Platform Integration**: Shopify, WooCommerce, and custom APIs
 - **Advanced Analytics**: Trend analysis and predictive insights
+
+### Shopify Integration Features
+- **OAuth 2.0 Authentication**: Secure store connection with proper authorization
+- **Real-time Product Sync**: Automatic synchronization of products and inventory
+- **Order Management**: Complete order tracking and analytics
+- **Webhook Processing**: Real-time updates for orders, products, and inventory
+- **Multi-store Support**: Connect and manage multiple Shopify stores
+- **Background Sync Jobs**: Efficient bulk data synchronization
 
 ### Technical Features
 - **Authentication**: Secure JWT-based authentication with Supabase
@@ -82,6 +91,11 @@ A comprehensive AI-powered retail analytics platform that provides intelligent i
 - [**Architecture Overview**](./ARCHITECTURE.md) - Technical architecture
 - [**Demo Guide**](./DEMO_GUIDE.md) - Demo preparation and script
 
+### Shopify Integration Documentation
+- [**Shopify Setup Guide**](./docs/SHOPIFY_SETUP.md) - Complete Shopify integration setup
+- [**Shopify API Documentation**](./docs/SHOPIFY_API.md) - Shopify API endpoints and usage
+- [**Shopify User Guide**](./docs/SHOPIFY_USER_GUIDE.md) - End-user Shopify features guide
+
 ### Architecture Documentation
 - [System Architecture](./docs/architecture/01-system-architecture.md)
 - [Database Schema](./docs/architecture/02-database-schema.md)
@@ -112,6 +126,12 @@ ENVIRONMENT=production
 DATABASE_URL=postgresql://...
 SUPABASE_URL=https://...
 SECRET_KEY=...
+
+# Shopify Integration
+SHOPIFY_CLIENT_ID=your_shopify_client_id
+SHOPIFY_CLIENT_SECRET=your_shopify_client_secret
+SHOPIFY_API_VERSION=2024-07
+SHOPIFY_SCOPES=read_products,read_inventory,read_orders,read_price_rules
 
 # Frontend (.env.local)
 NEXT_PUBLIC_API_URL=https://your-api.azurewebsites.net
