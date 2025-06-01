@@ -5,6 +5,7 @@ import { useApp, useProductFilter } from '@/contexts/AppContext';
 import { Play, Pause, Volume2, Maximize } from 'lucide-react';
 import { TrendAnalysisCard } from '@/components/trend/TrendAnalysisCard';
 import { TrendBadge, TrendIndicator } from '@/components/trend/TrendBadge';
+import { BusinessContextCard } from '@/components/business/BusinessContextCard';
 
 interface VideoPlayerProps {
   src?: string;
@@ -246,6 +247,11 @@ export default function ProductInsightsPage() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Product Insights</h2>
         
+        {/* Business Context Card - AI-powered business summary */}
+        <div className="mb-8">
+          <BusinessContextCard shopId={1} />
+        </div>
+
         {/* Video Player */}
         <div className="mb-8">
           <VideoPlayer title="AI Retail Advisor - Product Insights" />

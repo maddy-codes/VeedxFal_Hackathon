@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Context Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #efe;
+            border: 1px solid #cfc;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .business-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: white;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Azure AI Business Context Test</h1>
+        <p>Testing the Azure AI-powered business context generation feature.</p>
+        
+        <button id="testBtn" onclick="testBusinessContext()">Generate Business Context</button>
+        
+        <div id="status"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testBusinessContext() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('result');
+            const testBtn = document.getElementById('testBtn');
+            
+            // Reset UI
+            statusDiv.innerHTML = '<div class="loading">🔄 Generating business context with Azure AI...</div>';
+            resultDiv.innerHTML = '';
+            testBtn.disabled = true;
+            
+            try {
+                // Test the business context endpoint
+                const response = await fetch('http://localhost:8000/api/v1/trend-analysis/business-context/1', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                statusDiv.innerHTML = '<div class="success">✅ Business context generated successfully!</div>';
+                
+                // Display the results
+                displayBusinessContext(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            } finally {
+                testBtn.disabled = false;
+            }
+        }
+        
+        function displayBusinessContext(data) {
+            const resultDiv = document.getElementById('result');
+            const { business_summary, business_data, trend_summary } = data;
+            
+            resultDiv.innerHTML = `
+                <div class="business-summary">
+                    <h2>📊 Business Intelligence Summary</h2>
+                    <p><strong>Store:</strong> ${business_data.store_name}</p>
+                    <p><strong>Generated:</strong> ${new Date(business_summary.generated_at).toLocaleString()}</p>
+                    <p><strong>AI Provider:</strong> ${business_summary.ai_provider}</p>
+                    
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-value">$${business_data.revenue_30d.toLocaleString()}</div>
+                            <div class="metric-label">30-Day Revenue</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${business_data.orders_30d}</div>
+                            <div class="metric-label">Orders</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">$${business_data.avg_order_value}</div>
+                            <div class="metric-label">Avg Order Value</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${trend_summary.total_products}</div>
+                            <div class="metric-label">Total Products</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>📋 Executive Summary</h3>
+                        <p>${business_summary.executive_summary}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>💡 Key Insights</h3>
+                        <ul>
+                            ${business_summary.key_insights.map(insight => `<li>${insight}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>🎯 Performance Highlights</h3>
+                        <ul>
+                            ${business_summary.performance_highlights.map(highlight => `<li>${highlight}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>🔧 Areas for Improvement</h3>
+                        <ul>
+                            ${business_summary.areas_for_improvement.map(area => `<li>${area}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>🚀 Strategic Recommendations</h3>
+                        <ul>
+                            ${business_summary.strategic_recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>📈 Market Outlook</h3>
+                        <p>${business_summary.market_outlook}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>⚡ Priority Actions</h3>
+                        <ul>
+                            ${business_summary.priority_actions.map(action => `<li>${action}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>📊 Trend Distribution</h3>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="metric-value">${trend_summary.summary.Hot}</div>
+                                <div class="metric-label">Hot Products (${trend_summary.percentages.Hot}%)</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${trend_summary.summary.Rising}</div>
+                                <div class="metric-label">Rising Products (${trend_summary.percentages.Rising}%)</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${trend_summary.summary.Steady}</div>
+                                <div class="metric-label">Steady Products (${trend_summary.percentages.Steady}%)</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${trend_summary.summary.Declining}</div>
+                                <div class="metric-label">Declining Products (${trend_summary.percentages.Declining}%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Auto-run test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testBusinessContext, 1000);
+        });
+    </script>
+</body>
+</html>
